@@ -170,22 +170,10 @@ static bool wait_for_dhcp(const char* iface, int max_wait) {
  * Tries common names and falls back to scanning /sys/class/net.
  */
 static bool detect_wifi_iface(char* out, size_t out_size) {
-    /* Try common interface names first */
-    const char* candidates[] = {"wlan0", "wlp1s0", "wlp2s0", "wlp3s0", NULL};
-    for(int i = 0; candidates[i]; i++) {
-        char path[128];
-        snprintf(path, sizeof(path), "/sys/class/net/%s/wireless", candidates[i]);
-        if(access(path, F_OK) == 0) {
-            strncpy(out, candidates[i], out_size - 1);
-            out[out_size - 1] = '\0';
-            return true;
-        }
-    }
-
-    /* Fallback: scan /sys/class/net for any wireless interface */
+    /* Scan /sys/class/net for any interface with a wireless directory */
     char iface[32];
     if(run_cmd_output(
-           "ls /sys/class/net/*/wireless 2>/dev/null | head -1 | cut -d/ -f5",
+           "for d in /sys/class/net/*/wireless; do [ -d \"$d\" ] && basename \"$(dirname \"$d\")\" && break; done",
            iface, sizeof(iface)) && iface[0]) {
         strncpy(out, iface, out_size - 1);
         out[out_size - 1] = '\0';
@@ -197,6 +185,7 @@ static bool detect_wifi_iface(char* out, size_t out_size) {
 }
 
 bool wfr_net_has_networkmanager(void) {
+    if(run_cmd("which nmcli >/dev/null 2>&1") != 0) return false;
     return run_cmd("systemctl is-active --quiet NetworkManager") == 0;
 }
 

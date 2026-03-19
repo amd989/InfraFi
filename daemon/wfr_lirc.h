@@ -3,19 +3,17 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-/* Open a LIRC device. Returns file descriptor, or -1 on error. */
+/* Open a LIRC device in SCANCODE mode. Returns fd or -1 on error. */
 int wfr_lirc_open(const char* device);
 
 /* Close a LIRC device. */
 void wfr_lirc_close(int fd);
 
-/*
- * Read one timing event from the LIRC device.
- * Blocks until data is available. Silently skips overflow/timeout events.
+/* Read one decoded RC-6 scancode from the LIRC device.
+ * Blocks until an RC-6 scancode is available.
  *
- * is_pulse: set to true if this is a pulse (mark), false for space (gap)
- * duration_us: set to the duration in microseconds
+ * rc6_address: the 8-bit address field
+ * rc6_command: the 8-bit command field
  *
- * Returns 0 on success, -1 on error.
- */
-int wfr_lirc_read(int fd, bool* is_pulse, uint32_t* duration_us);
+ * Returns 0 on success, -1 on error. */
+int wfr_lirc_read_scancode(int fd, uint8_t* rc6_address, uint8_t* rc6_command);

@@ -7,66 +7,40 @@
 #include <time.h>
 
 /*
- * WFR protocol decoder state machine.
- * Feed it pulse/space timings and it reconstructs the WiFi credential payload.
+ * Wi-FiR scancode decoder.
+ * Reassembles RC-6 messages (address + command) into a WiFi credential payload.
+ * Each DATA message carries one byte of the payload.
  */
 
-typedef enum {
-    WfrDecodeIdle,
-    WfrDecodeHeaderSpace,
-    WfrDecodeReadingBits,
-} WfrDecodeState;
-
 typedef struct {
-    WfrDecodeState state;
-
-    /* Bit accumulation within a frame */
-    uint8_t frame_buf[3 + WFR_MAX_PAYLOAD_PER_FRAME + 1]; /* type+seq+len+payload+crc */
-    size_t frame_buf_len;
-    uint8_t current_byte;
-    uint8_t bit_index; /* 0-7, counts down from 7 (MSB first) */
-    bool expecting_space; /* after a bit pulse, we expect a space */
-
-    /* Multi-frame reassembly */
     uint8_t payload_buf[WFR_MAX_TOTAL_PAYLOAD + 1];
-    uint8_t expected_frames;
-    uint8_t expected_total_len;
-    uint8_t received_mask[32]; /* bitmask: which seq_nums received (up to 255 frames) */
-    uint8_t frames_received;
-    bool in_transmission; /* true after receiving START, until END or timeout */
+    uint8_t expected_len;   /* total payload length from START */
+    uint8_t write_cursor;   /* next byte position in current pass */
+    uint8_t current_pass;   /* which retransmit pass (0-3) */
+    bool in_transmission;
 
-    /* Timeout tracking */
     struct timespec start_time;
 } WfrDecoder;
 
-/*
- * Initialize/reset the decoder to its idle state.
- */
+/* Initialize/reset the decoder. */
 void wfr_decode_init(WfrDecoder* dec);
 
 /*
- * Feed one timing event into the decoder.
+ * Feed one decoded RC-6 scancode into the decoder.
  *
- * is_pulse: true for pulse (mark), false for space (gap)
- * duration_us: duration in microseconds
- * out: output buffer for the decoded WiFi QR payload string (null-terminated)
+ * rc6_address: the RC-6 address byte
+ * rc6_command: the RC-6 command byte
+ * out: output buffer for the decoded WiFi string (null-terminated)
  * out_size: size of the output buffer
  *
  * Returns:
- *   >0 : payload fully decoded; return value is the length of the string in out
- *    0 : timing consumed, more data needed
- *   -1 : error (bad CRC, timeout, etc.) — decoder resets itself
+ *   >0 : payload complete, return value = string length
+ *    0 : more data needed
+ *   -1 : error (bad CRC, timeout, etc.)
  */
-int wfr_decode_feed(
+int wfr_decode_feed_scancode(
     WfrDecoder* dec,
-    bool is_pulse,
-    uint32_t duration_us,
+    uint8_t rc6_address,
+    uint8_t rc6_command,
     char* out,
     size_t out_size);
-
-/*
- * Signal that a LIRC buffer overflow occurred.
- * Resets frame-level state (goes to Idle) but preserves transmission
- * state so retransmissions can still fill in missing frames.
- */
-void wfr_decode_overflow(WfrDecoder* dec);

@@ -9,42 +9,38 @@ extern "C" {
 #endif
 
 /*
- * WFR (Wi-FiR Raw) IR Protocol
+ * Wi-FiR Protocol — RC-6 Scancode Encoding
  *
- * Custom pulse-distance encoding over 38kHz consumer IR.
+ * Uses standard RC-6 IR messages (decoded by the kernel) instead of raw timings.
+ * Each RC-6 message carries 1 byte of payload via: address (framing) + command (data).
  * Payload is a WiFi QR string: WIFI:T:<type>;S:<ssid>;P:<pass>;H:<hidden>;;
  *
- * Frame structure:
- *   [Header 9000/4500] [frame_type:8] [seq:8] [len:8] [payload:0-32] [CRC-8] [Stop]
+ * Address byte layout:
+ *   Bits 7-4: Magic = 0xA (identifies Wi-FiR messages)
+ *   Bits 3-2: Frame type (00=START, 01=DATA, 10=END)
+ *   Bits 1-0: Pass number (0-3, which retransmission attempt)
+ *
+ * Messages per transmission:
+ *   START (len=N) → DATA × N (one byte each) → END (crc8)
  */
 
-/* IR timing constants (microseconds) */
-#define WFR_HEADER_PULSE   9000
-#define WFR_HEADER_SPACE   4500
-#define WFR_BIT_PULSE      560
-#define WFR_BIT_ONE_SPACE  1690
-#define WFR_BIT_ZERO_SPACE 560
-#define WFR_STOP_PULSE     560
-#define WFR_FRAME_GAP      40000
+/* RC-6 address byte encoding */
+#define WFR_RC6_MAGIC        0xA0
+#define WFR_RC6_MAGIC_MASK   0xF0
+#define WFR_RC6_TYPE_MASK    0x0C
+#define WFR_RC6_PASS_MASK    0x03
 
-/* IR carrier */
-#define WFR_CARRIER_FREQ 38000
-#define WFR_DUTY_CYCLE   0.33f
+#define WFR_RC6_TYPE_START   0x00
+#define WFR_RC6_TYPE_DATA    0x04
+#define WFR_RC6_TYPE_END     0x08
 
-/* Timing tolerance for decoding (+/- 30%) */
-#define WFR_TOLERANCE_PCT 30
-
-/* Frame types */
-#define WFR_FRAME_START 0x01
-#define WFR_FRAME_DATA  0x02
-#define WFR_FRAME_END   0x03
+/* Timing */
+#define WFR_RC6_INTER_MSG_MS      20   /* Delay between RC-6 messages (ms) */
+#define WFR_RC6_RETRANSMIT_GAP_MS 200  /* Gap between retransmission passes */
+#define WFR_RETRANSMIT_COUNT      2
 
 /* Protocol limits */
-#define WFR_MAX_PAYLOAD_PER_FRAME  16
-#define WFR_MAX_TOTAL_PAYLOAD      255
-#define WFR_INTER_FRAME_DELAY_MS   150
-#define WFR_RETRANSMIT_COUNT       3
-#define WFR_RETRANSMIT_GAP_MS      300
+#define WFR_MAX_TOTAL_PAYLOAD 255
 
 /* WiFi credential limits */
 #define WFR_SSID_MAX_LEN 32
@@ -66,39 +62,21 @@ typedef struct {
 
 /*
  * CRC-8/CCITT (poly 0x07, init 0x00)
- * Used for per-frame integrity check.
+ * Used for payload integrity check.
  */
 uint8_t wfr_crc8(const uint8_t* data, size_t len);
 
 /*
- * CRC-32 (standard ethernet polynomial)
- * Used for whole-payload integrity check in END frame.
- */
-uint32_t wfr_crc32(const uint8_t* data, size_t len);
-
-/*
  * Build a WiFi QR string from credentials.
  * Returns number of bytes written (excluding null terminator), or 0 on error.
- * Output is null-terminated.
- *
- * Example output: WIFI:T:WPA;S:MyNetwork;P:MyPass123;H:false;;
  */
 size_t wfr_build_wifi_string(const WfrWifiCreds* creds, char* out, size_t out_size);
 
 /*
  * Parse a WiFi QR string into credentials.
  * Returns true on success, false on parse error.
- * Handles backslash-escaped special characters (; : \ ")
  */
 bool wfr_parse_wifi_string(const char* str, WfrWifiCreds* creds);
-
-/*
- * Check if a timing value matches an expected value within tolerance.
- */
-static inline bool wfr_timing_match(uint32_t actual, uint32_t expected) {
-    uint32_t margin = expected * WFR_TOLERANCE_PCT / 100;
-    return (actual >= expected - margin) && (actual <= expected + margin);
-}
 
 #ifdef __cplusplus
 }

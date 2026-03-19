@@ -17,6 +17,21 @@ if [ ! -e /dev/lirc0 ]; then
     echo "Ensure your IR receiver is connected and the kernel module is loaded."
 fi
 
+# Configure IR receiver for RC-6 only
+RC_DIR="/sys/class/rc/rc0"
+if [ -d "$RC_DIR" ]; then
+    echo "Configuring IR receiver for RC-6 protocol..."
+    echo rc-6 > "$RC_DIR/protocols"
+    echo "  Active protocols: $(cat "$RC_DIR/protocols")"
+
+    # Persist via udev rule so it survives reboot
+    UDEV_RULE="/etc/udev/rules.d/99-wifird-rc6.rules"
+    echo 'ACTION=="add", SUBSYSTEM=="rc", ATTR{protocols}="rc-6"' > "$UDEV_RULE"
+    echo "  Created udev rule: $UDEV_RULE"
+else
+    echo "Warning: $RC_DIR not found. You may need to configure RC-6 manually."
+fi
+
 # Build
 echo "Building wifird..."
 cd "$SCRIPT_DIR"

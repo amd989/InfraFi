@@ -8,8 +8,6 @@
 #include <sys/ioctl.h>
 #include <linux/lirc.h>
 
-#define LIRC_VALUE_MASK 0x00FFFFFF
-
 int wfr_lirc_open(const char* device) {
     int fd = open(device, O_RDONLY);
     if(fd < 0) {
@@ -17,16 +15,14 @@ int wfr_lirc_open(const char* device) {
         return -1;
     }
 
-    /* Set receive mode to MODE2 (pulse/space timings) */
-    unsigned int mode = LIRC_MODE_MODE2;
+    /* Set receive mode to SCANCODE — kernel decodes RC-6 for us */
+    unsigned int mode = LIRC_MODE_SCANCODE;
     if(ioctl(fd, LIRC_SET_REC_MODE, &mode) < 0) {
-        syslog(
-            LOG_WARNING,
-            "wifird: LIRC_SET_REC_MODE failed: %s (may already be MODE2)",
-            strerror(errno));
-    } else {
-        syslog(LOG_INFO, "wifird: set receive mode to MODE2");
+        syslog(LOG_ERR, "wifird: LIRC_SET_REC_MODE SCANCODE failed: %s", strerror(errno));
+        close(fd);
+        return -1;
     }
+    syslog(LOG_INFO, "wifird: set receive mode to SCANCODE");
 
     syslog(LOG_INFO, "wifird: opened %s (fd=%d)", device, fd);
     return fd;
@@ -38,26 +34,31 @@ void wfr_lirc_close(int fd) {
     }
 }
 
-int wfr_lirc_read(int fd, bool* is_pulse, uint32_t* duration_us) {
+int wfr_lirc_read_scancode(int fd, uint8_t* rc6_address, uint8_t* rc6_command) {
     for(;;) {
-        uint32_t raw;
-        ssize_t n = read(fd, &raw, sizeof(raw));
-        if(n != (ssize_t)sizeof(raw)) {
+        struct lirc_scancode sc;
+        ssize_t n = read(fd, &sc, sizeof(sc));
+        if(n != (ssize_t)sizeof(sc)) {
             if(n < 0 && errno != EINTR) {
-                syslog(LOG_ERR, "wifird: lirc read error: %s", strerror(errno));
+                syslog(LOG_ERR, "wifird: scancode read error: %s", strerror(errno));
             }
             return -1;
         }
 
-        uint32_t type = raw & LIRC_MODE2_MASK;
+        syslog(LOG_DEBUG,
+            "wifird: scancode proto=%u flags=0x%x scancode=0x%llx",
+            (unsigned)sc.rc_proto,
+            (unsigned)sc.flags,
+            (unsigned long long)sc.scancode);
 
-        /* Silently skip overflow and timeout events */
-        if(type == LIRC_MODE2_OVERFLOW || type == LIRC_MODE2_TIMEOUT) {
+        /* Only accept RC-6 Mode 0 */
+        if(sc.rc_proto != RC_PROTO_RC6_0) {
             continue;
         }
 
-        *is_pulse = (type == LIRC_MODE2_PULSE);
-        *duration_us = raw & LIRC_VALUE_MASK;
+        /* RC-6 Mode 0 scancode: bits [15:8] = address, bits [7:0] = command */
+        *rc6_address = (uint8_t)((sc.scancode >> 8) & 0xFF);
+        *rc6_command = (uint8_t)(sc.scancode & 0xFF);
         return 0;
     }
 }
