@@ -9,7 +9,7 @@ extern "C" {
 #endif
 
 /*
- * WFR (Wi-Fir Raw) IR Protocol
+ * WFR (Wi-FiR Raw) IR Protocol
  *
  * Custom pulse-distance encoding over 38kHz consumer IR.
  * Payload is a WiFi QR string: WIFI:T:<type>;S:<ssid>;P:<pass>;H:<hidden>;;
@@ -19,42 +19,42 @@ extern "C" {
  */
 
 /* IR timing constants (microseconds) */
-#define WFR_HEADER_PULSE     9000
-#define WFR_HEADER_SPACE     4500
-#define WFR_BIT_PULSE        560
-#define WFR_BIT_ONE_SPACE    1690
-#define WFR_BIT_ZERO_SPACE   560
-#define WFR_STOP_PULSE       560
-#define WFR_FRAME_GAP        40000
+#define WFR_HEADER_PULSE   9000
+#define WFR_HEADER_SPACE   4500
+#define WFR_BIT_PULSE      560
+#define WFR_BIT_ONE_SPACE  1690
+#define WFR_BIT_ZERO_SPACE 560
+#define WFR_STOP_PULSE     560
+#define WFR_FRAME_GAP      40000
 
 /* IR carrier */
-#define WFR_CARRIER_FREQ     38000
-#define WFR_DUTY_CYCLE       0.33f
+#define WFR_CARRIER_FREQ 38000
+#define WFR_DUTY_CYCLE   0.33f
 
 /* Timing tolerance for decoding (+/- 30%) */
-#define WFR_TOLERANCE_PCT    30
+#define WFR_TOLERANCE_PCT 30
 
 /* Frame types */
-#define WFR_FRAME_START      0x01
-#define WFR_FRAME_DATA       0x02
-#define WFR_FRAME_END        0x03
+#define WFR_FRAME_START 0x01
+#define WFR_FRAME_DATA  0x02
+#define WFR_FRAME_END   0x03
 
 /* Protocol limits
  * 16 bytes/frame generates ~291 timings = 1164 bytes of mode2 data,
  * well within the typical 2048-byte kernel LIRC buffer. */
-#define WFR_MAX_PAYLOAD_PER_FRAME  16
-#define WFR_MAX_TOTAL_PAYLOAD      255
-#define WFR_INTER_FRAME_DELAY_MS   100
+#define WFR_MAX_PAYLOAD_PER_FRAME 16
+#define WFR_MAX_TOTAL_PAYLOAD     255
+#define WFR_INTER_FRAME_DELAY_MS  100
 
 /* WiFi credential limits */
-#define WFR_SSID_MAX_LEN     32
-#define WFR_PASS_MAX_LEN     63
+#define WFR_SSID_MAX_LEN 32
+#define WFR_PASS_MAX_LEN 63
 
 /* Security types */
-#define WFR_SEC_OPEN         0
-#define WFR_SEC_WPA          1
-#define WFR_SEC_WEP          2
-#define WFR_SEC_SAE          3
+#define WFR_SEC_OPEN 0
+#define WFR_SEC_WPA  1
+#define WFR_SEC_WEP  2
+#define WFR_SEC_SAE  3
 
 /* WiFi credentials struct — shared between Flipper and daemon */
 typedef struct {

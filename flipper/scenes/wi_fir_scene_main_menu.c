@@ -11,8 +11,7 @@ static void wi_fir_scene_main_menu_callback(void* context, uint32_t index) {
         view_dispatcher_send_custom_event(
             app->view_dispatcher, WiFirCustomEventMainMenuCredentials);
     } else if(index == MainMenuIndexAbout) {
-        view_dispatcher_send_custom_event(
-            app->view_dispatcher, WiFirCustomEventMainMenuAbout);
+        view_dispatcher_send_custom_event(app->view_dispatcher, WiFirCustomEventMainMenuAbout);
     }
 }
 
@@ -20,18 +19,19 @@ void wi_fir_scene_main_menu_on_enter(void* context) {
     WiFirApp* app = context;
 
     submenu_reset(app->submenu);
-    submenu_set_header(app->submenu, "Wi-Fir");
+    submenu_set_header(app->submenu, "Wi-FiR");
     submenu_add_item(
-        app->submenu, "Send Credentials", MainMenuIndexCredentials,
-        wi_fir_scene_main_menu_callback, app);
+        app->submenu,
+        "Send Credentials",
+        MainMenuIndexCredentials,
+        wi_fir_scene_main_menu_callback,
+        app);
     submenu_add_item(
-        app->submenu, "About", MainMenuIndexAbout,
-        wi_fir_scene_main_menu_callback, app);
+        app->submenu, "About", MainMenuIndexAbout, wi_fir_scene_main_menu_callback, app);
 
     /* Restore selected item when returning to this scene */
     submenu_set_selected_item(
-        app->submenu,
-        scene_manager_get_scene_state(app->scene_manager, WiFirSceneMainMenu));
+        app->submenu, scene_manager_get_scene_state(app->scene_manager, WiFirSceneMainMenu));
 
     view_dispatcher_switch_to_view(app->view_dispatcher, WiFirViewSubmenu);
 }
