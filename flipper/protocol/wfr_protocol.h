@@ -37,7 +37,7 @@ extern "C" {
 /* Timing */
 #define WFR_RC6_INTER_MSG_MS      20   /* Delay between RC-6 messages (ms) */
 #define WFR_RC6_RETRANSMIT_GAP_MS 200  /* Gap between retransmission passes */
-#define WFR_RETRANSMIT_COUNT      2
+#define WFR_RETRANSMIT_COUNT      1
 
 /* Protocol limits */
 #define WFR_MAX_TOTAL_PAYLOAD 255

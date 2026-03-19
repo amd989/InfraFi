@@ -42,7 +42,7 @@ bool wfr_transmit_credentials(const WfrWifiCreds* creds) {
         wfr_send_rc6(WFR_RC6_MAGIC | WFR_RC6_TYPE_END | pass, payload_crc);
 
         /* Gap between retransmission passes */
-        if(attempt < WFR_RETRANSMIT_COUNT - 1) {
+        if(attempt + 1 < WFR_RETRANSMIT_COUNT) {
             furi_delay_ms(WFR_RC6_RETRANSMIT_GAP_MS);
         }
     }

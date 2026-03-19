@@ -175,8 +175,7 @@ static bool detect_wifi_iface(char* out, size_t out_size) {
     if(run_cmd_output(
            "for d in /sys/class/net/*/wireless; do [ -d \"$d\" ] && basename \"$(dirname \"$d\")\" && break; done",
            iface, sizeof(iface)) && iface[0]) {
-        strncpy(out, iface, out_size - 1);
-        out[out_size - 1] = '\0';
+        snprintf(out, out_size, "%s", iface);
         return true;
     }
 
@@ -199,8 +198,7 @@ bool wfr_net_get_current(char* out, size_t out_size) {
             char* ssid = strchr(line, ':');
             if(ssid && *(ssid + 1)) {
                 ssid++;
-                strncpy(out, ssid, out_size - 1);
-                out[out_size - 1] = '\0';
+                snprintf(out, out_size, "%s", ssid);
                 return true;
             }
         }
