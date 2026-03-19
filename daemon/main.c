@@ -1,0 +1,149 @@
+#include "wfr_lirc.h"
+#include "wfr_decode.h"
+#include "wfr_network.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <signal.h>
+#include <syslog.h>
+#include <stdbool.h>
+#include <getopt.h>
+
+static volatile bool running = true;
+
+static void signal_handler(int sig) {
+    (void)sig;
+    running = false;
+}
+
+static void print_usage(const char* prog) {
+    fprintf(stderr, "Usage: %s [options]\n", prog);
+    fprintf(stderr, "Options:\n");
+    fprintf(stderr, "  -d, --device PATH   LIRC device (default: /dev/lirc0)\n");
+    fprintf(stderr, "  -f, --foreground     Run in foreground (don't daemonize)\n");
+    fprintf(stderr, "  -v, --verbose        Verbose logging\n");
+    fprintf(stderr, "  -h, --help           Show this help\n");
+}
+
+int main(int argc, char* argv[]) {
+    const char* device = "/dev/lirc0";
+    bool foreground = false;
+    int log_level = LOG_INFO;
+
+    static struct option long_opts[] = {
+        {"device", required_argument, NULL, 'd'},
+        {"foreground", no_argument, NULL, 'f'},
+        {"verbose", no_argument, NULL, 'v'},
+        {"help", no_argument, NULL, 'h'},
+        {NULL, 0, NULL, 0},
+    };
+
+    int opt;
+    while((opt = getopt_long(argc, argv, "d:fvh", long_opts, NULL)) != -1) {
+        switch(opt) {
+        case 'd':
+            device = optarg;
+            break;
+        case 'f':
+            foreground = true;
+            break;
+        case 'v':
+            log_level = LOG_DEBUG;
+            break;
+        case 'h':
+            print_usage(argv[0]);
+            return 0;
+        default:
+            print_usage(argv[0]);
+            return 1;
+        }
+    }
+
+    /* Set up syslog */
+    openlog("wifird", LOG_PID | (foreground ? LOG_PERROR : 0), LOG_DAEMON);
+    setlogmask(LOG_UPTO(log_level));
+
+    syslog(LOG_INFO, "wifird starting (device=%s)", device);
+
+    /* Signal handling */
+    struct sigaction sa = {0};
+    sa.sa_handler = signal_handler;
+    sigaction(SIGTERM, &sa, NULL);
+    sigaction(SIGINT, &sa, NULL);
+
+    /* Open LIRC device */
+    int lirc_fd = wfr_lirc_open(device);
+    if(lirc_fd < 0) {
+        syslog(LOG_ERR, "failed to open LIRC device %s", device);
+        closelog();
+        return 1;
+    }
+
+    /* Initialize decoder */
+    WfrDecoder decoder;
+    wfr_decode_init(&decoder);
+
+    char payload[WFR_MAX_TOTAL_PAYLOAD + 1];
+
+    syslog(LOG_INFO, "wifird ready, listening for IR transmissions");
+
+    /* Main loop */
+    while(running) {
+        bool is_pulse;
+        uint32_t duration_us;
+
+        if(wfr_lirc_read(lirc_fd, &is_pulse, &duration_us) < 0) {
+            if(!running) break;
+            continue;
+        }
+
+        int result = wfr_decode_feed(&decoder, is_pulse, duration_us, payload, sizeof(payload));
+
+        if(result > 0) {
+            syslog(LOG_INFO, "received credentials: %s", payload);
+
+            /* Parse WiFi QR string */
+            WfrWifiCreds creds;
+            if(!wfr_parse_wifi_string(payload, &creds)) {
+                syslog(LOG_ERR, "failed to parse WiFi string: %s", payload);
+                continue;
+            }
+
+            syslog(
+                LOG_INFO,
+                "parsed: SSID=%s, security=%d, hidden=%d",
+                creds.ssid,
+                creds.security,
+                creds.hidden);
+
+            /* Save current connection for rollback */
+            char prev_ssid[WFR_SSID_MAX_LEN + 1] = {0};
+            wfr_net_get_current(prev_ssid, sizeof(prev_ssid));
+
+            if(prev_ssid[0]) {
+                syslog(LOG_INFO, "current connection: %s (saved for rollback)", prev_ssid);
+            }
+
+            /* Attempt connection */
+            if(wfr_net_connect(&creds)) {
+                syslog(LOG_INFO, "successfully connected to %s", creds.ssid);
+            } else {
+                syslog(LOG_ERR, "failed to connect to %s", creds.ssid);
+                if(prev_ssid[0]) {
+                    syslog(LOG_INFO, "attempting rollback to %s", prev_ssid);
+                    if(wfr_net_rollback(prev_ssid)) {
+                        syslog(LOG_INFO, "rollback successful");
+                    } else {
+                        syslog(LOG_ERR, "rollback failed — manual intervention may be needed");
+                    }
+                }
+            }
+        }
+    }
+
+    syslog(LOG_INFO, "wifird shutting down");
+    wfr_lirc_close(lirc_fd);
+    closelog();
+    return 0;
+}
