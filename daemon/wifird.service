@@ -1,5 +1,5 @@
 [Unit]
-Description=Wi-Fir IR WiFi Credential Receiver
+Description=Wi-FiR IR WiFi Credential Receiver
 After=network.target
 Wants=network.target
 

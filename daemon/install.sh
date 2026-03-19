@@ -3,7 +3,7 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-echo "=== Wi-Fir Daemon Installer ==="
+echo "=== Wi-FiR Daemon Installer ==="
 
 # Check for root
 if [ "$(id -u)" -ne 0 ]; then
