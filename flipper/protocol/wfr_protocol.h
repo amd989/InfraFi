@@ -39,10 +39,12 @@ extern "C" {
 #define WFR_FRAME_DATA       0x02
 #define WFR_FRAME_END        0x03
 
-/* Protocol limits */
-#define WFR_MAX_PAYLOAD_PER_FRAME  32
+/* Protocol limits
+ * 16 bytes/frame generates ~291 timings = 1164 bytes of mode2 data,
+ * well within the typical 2048-byte kernel LIRC buffer. */
+#define WFR_MAX_PAYLOAD_PER_FRAME  16
 #define WFR_MAX_TOTAL_PAYLOAD      255
-#define WFR_INTER_FRAME_DELAY_MS   50
+#define WFR_INTER_FRAME_DELAY_MS   100
 
 /* WiFi credential limits */
 #define WFR_SSID_MAX_LEN     32
