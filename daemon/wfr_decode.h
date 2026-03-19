@@ -63,3 +63,10 @@ int wfr_decode_feed(
     uint32_t duration_us,
     char* out,
     size_t out_size);
+
+/*
+ * Signal that a LIRC buffer overflow occurred.
+ * Resets frame-level state (goes to Idle) but preserves transmission
+ * state so retransmissions can still fill in missing frames.
+ */
+void wfr_decode_overflow(WfrDecoder* dec);

@@ -98,52 +98,63 @@ bool wfr_transmit_credentials(const WfrWifiCreds* creds) {
     uint32_t payload_crc32 = wfr_crc32(payload_bytes, wifi_len);
 
     /* Timing buffer for a single frame — heap-allocated to avoid stack overflow.
-     * Max frame: header(2) + (3 + 32 payload + 1 crc) * 16 bits + stop(1) = 579 timings */
-    const size_t timings_max = 600;
+     * Max frame: header(2) + (3 + 16 payload + 1 crc) * 16 bits + stop(1) = 323 timings */
+    const size_t timings_max = 400;
     uint32_t* timings = malloc(timings_max * sizeof(uint32_t));
     if(!timings) return false;
 
     bool success = false;
 
-    /* --- Send START frame --- */
-    uint8_t start_payload[2];
-    start_payload[0] = total_data_frames;
-    start_payload[1] = (uint8_t)wifi_len;
+    /* Retransmit the full sequence multiple times.
+     * The receiver accumulates frames across retransmissions —
+     * each pass fills in whatever the hardware FIFO dropped last time. */
+    for(uint8_t attempt = 0; attempt < WFR_RETRANSMIT_COUNT; attempt++) {
+        /* --- Send START frame --- */
+        uint8_t start_payload[2];
+        start_payload[0] = total_data_frames;
+        start_payload[1] = (uint8_t)wifi_len;
 
-    size_t timing_count = wfr_encode_frame(
-        WFR_FRAME_START, 0, start_payload, sizeof(start_payload), timings, timings_max);
-    if(!timing_count) goto cleanup;
-
-    infrared_send_raw_ext(timings, timing_count, true, WFR_CARRIER_FREQ, WFR_DUTY_CYCLE);
-    furi_delay_ms(WFR_INTER_FRAME_DELAY_MS);
-
-    /* --- Send DATA frames --- */
-    for(uint8_t seq = 0; seq < total_data_frames; seq++) {
-        size_t offset = seq * WFR_MAX_PAYLOAD_PER_FRAME;
-        size_t remaining = wifi_len - offset;
-        uint8_t chunk_len =
-            (remaining > WFR_MAX_PAYLOAD_PER_FRAME) ? WFR_MAX_PAYLOAD_PER_FRAME : (uint8_t)remaining;
-
-        timing_count = wfr_encode_frame(
-            WFR_FRAME_DATA, seq, &payload_bytes[offset], chunk_len, timings, timings_max);
+        size_t timing_count = wfr_encode_frame(
+            WFR_FRAME_START, 0, start_payload, sizeof(start_payload), timings, timings_max);
         if(!timing_count) goto cleanup;
 
         infrared_send_raw_ext(timings, timing_count, true, WFR_CARRIER_FREQ, WFR_DUTY_CYCLE);
         furi_delay_ms(WFR_INTER_FRAME_DELAY_MS);
+
+        /* --- Send DATA frames --- */
+        for(uint8_t seq = 0; seq < total_data_frames; seq++) {
+            size_t offset = seq * WFR_MAX_PAYLOAD_PER_FRAME;
+            size_t remaining = wifi_len - offset;
+            uint8_t chunk_len =
+                (remaining > WFR_MAX_PAYLOAD_PER_FRAME) ? WFR_MAX_PAYLOAD_PER_FRAME : (uint8_t)remaining;
+
+            timing_count = wfr_encode_frame(
+                WFR_FRAME_DATA, seq, &payload_bytes[offset], chunk_len, timings, timings_max);
+            if(!timing_count) goto cleanup;
+
+            infrared_send_raw_ext(timings, timing_count, true, WFR_CARRIER_FREQ, WFR_DUTY_CYCLE);
+            furi_delay_ms(WFR_INTER_FRAME_DELAY_MS);
+        }
+
+        /* --- Send END frame --- */
+        uint8_t end_payload[4];
+        end_payload[0] = (uint8_t)(payload_crc32 >> 24);
+        end_payload[1] = (uint8_t)(payload_crc32 >> 16);
+        end_payload[2] = (uint8_t)(payload_crc32 >> 8);
+        end_payload[3] = (uint8_t)(payload_crc32 & 0xFF);
+
+        timing_count = wfr_encode_frame(
+            WFR_FRAME_END, 0, end_payload, sizeof(end_payload), timings, timings_max);
+        if(!timing_count) goto cleanup;
+
+        infrared_send_raw_ext(timings, timing_count, true, WFR_CARRIER_FREQ, WFR_DUTY_CYCLE);
+
+        /* Gap between retransmissions */
+        if(attempt < WFR_RETRANSMIT_COUNT - 1) {
+            furi_delay_ms(WFR_RETRANSMIT_GAP_MS);
+        }
     }
 
-    /* --- Send END frame --- */
-    uint8_t end_payload[4];
-    end_payload[0] = (uint8_t)(payload_crc32 >> 24);
-    end_payload[1] = (uint8_t)(payload_crc32 >> 16);
-    end_payload[2] = (uint8_t)(payload_crc32 >> 8);
-    end_payload[3] = (uint8_t)(payload_crc32 & 0xFF);
-
-    timing_count = wfr_encode_frame(
-        WFR_FRAME_END, 0, end_payload, sizeof(end_payload), timings, timings_max);
-    if(!timing_count) goto cleanup;
-
-    infrared_send_raw_ext(timings, timing_count, true, WFR_CARRIER_FREQ, WFR_DUTY_CYCLE);
     success = true;
 
 cleanup:

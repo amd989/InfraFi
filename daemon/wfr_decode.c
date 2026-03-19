@@ -2,11 +2,25 @@
 #include <string.h>
 #include <syslog.h>
 
-#define WFR_TIMEOUT_SEC 5
+#define WFR_TIMEOUT_SEC 15
 
 void wfr_decode_init(WfrDecoder* dec) {
     memset(dec, 0, sizeof(WfrDecoder));
     dec->state = WfrDecodeIdle;
+}
+
+void wfr_decode_overflow(WfrDecoder* dec) {
+    /* Reset frame-level state so decoder hunts for next header.
+     * Keep transmission state (received_mask, payload_buf) intact
+     * so retransmissions can fill gaps. */
+    if(dec->state != WfrDecodeIdle) {
+        syslog(LOG_DEBUG, "wifird: overflow mid-frame, resetting to idle");
+    }
+    dec->state = WfrDecodeIdle;
+    dec->frame_buf_len = 0;
+    dec->current_byte = 0;
+    dec->bit_index = 0;
+    dec->expecting_space = false;
 }
 
 static void wfr_decode_reset(WfrDecoder* dec) {
@@ -94,6 +108,19 @@ static int wfr_decode_process_frame(WfrDecoder* dec, char* out, size_t out_size)
             syslog(LOG_WARNING, "wifird: START frame bad payload len %d", payload_len);
             return -1;
         }
+        /* If this is a retransmission of the same payload (same frame count and length),
+         * keep the frames we already have and just refresh the timeout. */
+        if(dec->in_transmission &&
+           dec->expected_frames == payload[0] &&
+           dec->expected_total_len == payload[1]) {
+            clock_gettime(CLOCK_MONOTONIC, &dec->start_time);
+            syslog(
+                LOG_INFO,
+                "wifird: START retransmit (have %d/%d frames)",
+                dec->frames_received,
+                dec->expected_frames);
+            return 0;
+        }
         dec->expected_frames = payload[0];
         dec->expected_total_len = payload[1];
         dec->frames_received = 0;
@@ -146,15 +173,14 @@ static int wfr_decode_process_frame(WfrDecoder* dec, char* out, size_t out_size)
             wfr_decode_reset(dec);
             return -1;
         }
-        /* Check all DATA frames received */
+        /* Check all DATA frames received — if not, wait for retransmission */
         if(dec->frames_received != dec->expected_frames) {
             syslog(
-                LOG_WARNING,
-                "wifird: END but only %d/%d DATA frames received",
+                LOG_INFO,
+                "wifird: END but only %d/%d DATA frames — waiting for retransmit",
                 dec->frames_received,
                 dec->expected_frames);
-            wfr_decode_reset(dec);
-            return -1;
+            return 0; /* don't reset — next retransmission will fill gaps */
         }
         /* Verify CRC-32 */
         {
@@ -209,6 +235,7 @@ int wfr_decode_feed(
     case WfrDecodeIdle:
         /* Looking for header pulse (9000us) */
         if(is_pulse && wfr_timing_match(duration_us, WFR_HEADER_PULSE)) {
+            syslog(LOG_DEBUG, "wifird: header pulse detected (%u us)", duration_us);
             dec->state = WfrDecodeHeaderSpace;
         }
         return 0;
@@ -216,9 +243,11 @@ int wfr_decode_feed(
     case WfrDecodeHeaderSpace:
         /* Looking for header space (4500us) */
         if(!is_pulse && wfr_timing_match(duration_us, WFR_HEADER_SPACE)) {
+            syslog(LOG_DEBUG, "wifird: header complete, reading bits");
             wfr_decode_begin_frame(dec);
         } else {
-            /* Not a valid header, go back to idle */
+            syslog(LOG_DEBUG, "wifird: header space bad (%s %u us), back to idle",
+                   is_pulse ? "pulse" : "space", duration_us);
             dec->state = WfrDecodeIdle;
         }
         return 0;
