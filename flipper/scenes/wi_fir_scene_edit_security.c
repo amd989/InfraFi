@@ -1,6 +1,6 @@
 #include "../wi_fir.h"
 
-static const char* security_names[] = {"Open", "WPA/WPA2", "WEP", "WPA3 (SAE)"};
+static const char* security_names[] = {"Open", "WPA", "WEP", "SAE"};
 #define SECURITY_COUNT 4
 
 static void wi_fir_scene_edit_security_change_callback(VariableItem* item) {

@@ -21,6 +21,7 @@ typedef enum {
     WiFirCustomEventTextInputDone,
     WiFirCustomEventSecurityDone,
     WiFirCustomEventConfirmSend,
+    WiFirCustomEventConfirmBack,
     WiFirCustomEventTransmitDone,
     WiFirCustomEventTransmitFail,
 } WiFirCustomEvent;

@@ -7,6 +7,8 @@ static void wi_fir_scene_confirm_callback(DialogExResult result, void* context) 
     WiFirApp* app = context;
     if(result == DialogExResultRight) {
         view_dispatcher_send_custom_event(app->view_dispatcher, WiFirCustomEventConfirmSend);
+    } else if(result == DialogExResultLeft) {
+        view_dispatcher_send_custom_event(app->view_dispatcher, WiFirCustomEventConfirmBack);
     }
 }
 
@@ -42,11 +44,10 @@ bool wi_fir_scene_confirm_on_event(void* context, SceneManagerEvent event) {
         if(event.event == WiFirCustomEventConfirmSend) {
             scene_manager_next_scene(app->scene_manager, WiFirSceneTransmit);
             consumed = true;
+        } else if(event.event == WiFirCustomEventConfirmBack) {
+            scene_manager_previous_scene(app->scene_manager);
+            consumed = true;
         }
-    } else if(event.type == SceneManagerEventTypeBack) {
-        /* Go back to security selection */
-        scene_manager_previous_scene(app->scene_manager);
-        consumed = true;
     }
 
     return consumed;
