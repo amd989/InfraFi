@@ -103,12 +103,22 @@ static const char* get_wpa_state(const char* iface) {
     return NULL;
 }
 
+/* Get the SSID that wpa_supplicant is currently connected to. */
+static bool get_wpa_ssid(const char* iface, char* out, size_t out_size) {
+    char cmd[256];
+    snprintf(cmd, sizeof(cmd),
+        "wpa_cli -i %s status 2>/dev/null | grep '^ssid=' | cut -d= -f2", iface);
+    return run_cmd_output(cmd, out, out_size) && out[0];
+}
+
 /*
  * Wait for WPA association with retries.
  * Polls wpa_cli status every 2 seconds, up to max_wait seconds.
+ * Also verifies the connected SSID matches the target to avoid
+ * falsely reporting success when an old wpa_supplicant is still running.
  * Returns: 1 = COMPLETED, 0 = timeout/still trying, -1 = auth failure
  */
-static int wait_for_wpa_association(const char* iface, int max_wait) {
+static int wait_for_wpa_association(const char* iface, const char* target_ssid, int max_wait) {
     for(int elapsed = 0; elapsed < max_wait; elapsed += 2) {
         sleep(2);
         const char* state = get_wpa_state(iface);
@@ -121,7 +131,16 @@ static int wait_for_wpa_association(const char* iface, int max_wait) {
         syslog(LOG_DEBUG, "infrafid: wpa_state=%s (%ds elapsed)", state, elapsed + 2);
 
         if(strcmp(state, "COMPLETED") == 0) {
-            syslog(LOG_INFO, "redfid: WPA association completed");
+            /* Verify we're on the right SSID, not a stale connection */
+            char connected_ssid[WFR_SSID_MAX_LEN + 1];
+            if(get_wpa_ssid(iface, connected_ssid, sizeof(connected_ssid))) {
+                if(strcmp(connected_ssid, target_ssid) != 0) {
+                    syslog(LOG_WARNING,
+                        "infrafid: WPA shows COMPLETED but on '%s' not '%s' — stale connection",
+                        connected_ssid, target_ssid);
+                    return -1;
+                }
+            }
             syslog(LOG_INFO, "infrafid: WPA association completed for %s", target_ssid);
             return 1;
         }
@@ -189,6 +208,10 @@ bool wfr_net_has_networkmanager(void) {
     return run_cmd("systemctl is-active --quiet NetworkManager") == 0;
 }
 
+static bool has_systemd_networkd(void) {
+    return run_cmd("systemctl is-active --quiet systemd-networkd") == 0;
+}
+
 bool wfr_net_get_current(char* out, size_t out_size) {
     if(wfr_net_has_networkmanager()) {
         char line[256];
@@ -203,16 +226,13 @@ bool wfr_net_get_current(char* out, size_t out_size) {
                 return true;
             }
         }
-    } else {
-        /* ifupdown/wpa_supplicant: ask wpa_cli for current SSID */
-        char iface[32];
-        if(detect_wifi_iface(iface, sizeof(iface))) {
-            char cmd[256];
-            snprintf(cmd, sizeof(cmd),
-                "wpa_cli -i %s status 2>/dev/null | grep '^ssid=' | cut -d= -f2", iface);
-            if(run_cmd_output(cmd, out, out_size) && out[0]) {
-                return true;
-            }
+    }
+
+    /* systemd-networkd or ifupdown: ask wpa_cli for current SSID */
+    char iface[32];
+    if(detect_wifi_iface(iface, sizeof(iface))) {
+        if(get_wpa_ssid(iface, out, out_size)) {
+            return true;
         }
     }
 
@@ -270,6 +290,105 @@ static bool wfr_net_connect_nmcli(const WfrWifiCreds* creds) {
     return true;
 }
 
+/*
+ * Connect via wpa_cli (for systemd-networkd managed systems like OMV).
+ * Reconfigures the running wpa_supplicant instance directly instead of
+ * writing config files and restarting services.
+ */
+static bool wfr_net_connect_networkd(const WfrWifiCreds* creds) {
+    char iface[32];
+    if(!detect_wifi_iface(iface, sizeof(iface))) {
+        syslog(LOG_ERR, "infrafid: cannot connect — no WiFi interface");
+        return false;
+    }
+
+    syslog(LOG_INFO, "infrafid: using WiFi interface: %s (systemd-networkd)", iface);
+
+    /* Add a new network via wpa_cli */
+    char net_id[8];
+    char cmd[512];
+    snprintf(cmd, sizeof(cmd), "wpa_cli -i %s add_network 2>/dev/null", iface);
+    if(!run_cmd_output(cmd, net_id, sizeof(net_id)) || strcmp(net_id, "FAIL") == 0) {
+        syslog(LOG_ERR, "infrafid: wpa_cli add_network failed");
+        return false;
+    }
+
+    syslog(LOG_DEBUG, "infrafid: wpa_cli added network %s", net_id);
+
+    /* Set SSID */
+    snprintf(cmd, sizeof(cmd),
+        "wpa_cli -i %s set_network %s ssid '\"%s\"' 2>/dev/null", iface, net_id, creds->ssid);
+    if(run_cmd(cmd) != 0) {
+        syslog(LOG_ERR, "infrafid: wpa_cli set ssid failed");
+        return false;
+    }
+
+    /* Set security */
+    if(creds->security == WFR_SEC_OPEN) {
+        snprintf(cmd, sizeof(cmd),
+            "wpa_cli -i %s set_network %s key_mgmt NONE 2>/dev/null", iface, net_id);
+        run_cmd(cmd);
+    } else if(creds->security == WFR_SEC_SAE) {
+        snprintf(cmd, sizeof(cmd),
+            "wpa_cli -i %s set_network %s key_mgmt SAE 2>/dev/null", iface, net_id);
+        run_cmd(cmd);
+        snprintf(cmd, sizeof(cmd),
+            "wpa_cli -i %s set_network %s psk '\"%s\"' 2>/dev/null", iface, net_id, creds->password);
+        run_cmd(cmd);
+    } else {
+        snprintf(cmd, sizeof(cmd),
+            "wpa_cli -i %s set_network %s psk '\"%s\"' 2>/dev/null", iface, net_id, creds->password);
+        if(run_cmd(cmd) != 0) {
+            syslog(LOG_ERR, "infrafid: wpa_cli set psk failed");
+            return false;
+        }
+    }
+
+    if(creds->hidden) {
+        snprintf(cmd, sizeof(cmd),
+            "wpa_cli -i %s set_network %s scan_ssid 1 2>/dev/null", iface, net_id);
+        run_cmd(cmd);
+    }
+
+    /* Select this network (disconnects from current, connects to new) */
+    snprintf(cmd, sizeof(cmd),
+        "wpa_cli -i %s select_network %s 2>/dev/null", iface, net_id);
+    if(run_cmd(cmd) != 0) {
+        syslog(LOG_ERR, "infrafid: wpa_cli select_network failed");
+        return false;
+    }
+
+    /* Wait for WPA association (up to 20 seconds) */
+    int wpa_result = wait_for_wpa_association(iface, creds->ssid, 20);
+    if(wpa_result < 0) {
+        syslog(LOG_ERR, "infrafid: WPA authentication failed for %s", creds->ssid);
+        return false;
+    }
+
+    /* Request DHCP renewal */
+    snprintf(cmd, sizeof(cmd), "dhclient -r %s 2>/dev/null; dhclient %s 2>/dev/null", iface, iface);
+    run_cmd(cmd);
+
+    /* Wait for DHCP */
+    if(!wait_for_dhcp(iface, 15)) {
+        syslog(LOG_ERR, "infrafid: no IP address obtained on %s", iface);
+        return false;
+    }
+
+    /* Verify connectivity */
+    if(verify_connectivity()) {
+        syslog(LOG_INFO, "infrafid: connected to %s with internet access", creds->ssid);
+    } else {
+        syslog(LOG_WARNING, "infrafid: connected to %s but no internet (DNS failed)", creds->ssid);
+    }
+
+    /* Save to wpa_supplicant config so it persists across reboots */
+    snprintf(cmd, sizeof(cmd), "wpa_cli -i %s save_config 2>/dev/null", iface);
+    run_cmd(cmd);
+
+    return true;
+}
+
 static bool wfr_net_connect_interfaces(const WfrWifiCreds* creds) {
     char iface[32];
     if(!detect_wifi_iface(iface, sizeof(iface))) {
@@ -323,9 +442,12 @@ static bool wfr_net_connect_interfaces(const WfrWifiCreds* creds) {
 
     syslog(LOG_INFO, "infrafid: wrote config, bringing up %s", iface);
 
-    /* Bring interface down and back up instead of full networking restart
-     * to avoid disrupting other interfaces (e.g. ethernet) */
+    /* Kill any existing wpa_supplicant on this interface so ours can start */
     char cmd[256];
+    snprintf(cmd, sizeof(cmd), "wpa_cli -i %s terminate 2>/dev/null; sleep 1", iface);
+    run_cmd(cmd);
+
+    /* Bring interface down and back up */
     snprintf(cmd, sizeof(cmd), "ifdown %s 2>&1; ifup %s 2>&1", iface, iface);
     int status = run_cmd(cmd);
     if(status != 0) {
@@ -333,7 +455,7 @@ static bool wfr_net_connect_interfaces(const WfrWifiCreds* creds) {
     }
 
     /* Stage 1: wait for WPA authentication (up to 20 seconds) */
-    int wpa_result = wait_for_wpa_association(iface, 20);
+    int wpa_result = wait_for_wpa_association(iface, creds->ssid, 20);
     if(wpa_result < 0) {
         syslog(LOG_ERR, "infrafid: WPA authentication failed for %s", creds->ssid);
         return false;
@@ -364,6 +486,8 @@ bool wfr_net_connect(const WfrWifiCreds* creds) {
 
     if(wfr_net_has_networkmanager()) {
         return wfr_net_connect_nmcli(creds);
+    } else if(has_systemd_networkd()) {
+        return wfr_net_connect_networkd(creds);
     } else {
         return wfr_net_connect_interfaces(creds);
     }
@@ -389,24 +513,34 @@ bool wfr_net_rollback(const char* ssid) {
         return true;
     }
 
-    /* For non-NM systems, remove our config and bring interface back up */
     char iface[32];
-    if(detect_wifi_iface(iface, sizeof(iface))) {
-        char cmd[256];
-        snprintf(cmd, sizeof(cmd), "ifdown %s 2>&1", iface);
-        run_cmd(cmd);
+    if(!detect_wifi_iface(iface, sizeof(iface))) {
+        return false;
     }
 
-    unlink("/etc/network/interfaces.d/redfid");
-
-    /* Remove any redfid wpa_supplicant configs */
-    run_cmd("rm -f /etc/wpa_supplicant/wpa_supplicant-redfid-*.conf 2>/dev/null");
-
-    if(iface[0]) {
+    if(has_systemd_networkd()) {
+        /* systemd-networkd: reload wpa_supplicant config to restore previous networks */
         char cmd[256];
-        snprintf(cmd, sizeof(cmd), "ifup %s 2>&1", iface);
+        snprintf(cmd, sizeof(cmd), "wpa_cli -i %s reconfigure 2>/dev/null", iface);
         run_cmd(cmd);
+        syslog(LOG_INFO, "infrafid: reconfigured wpa_supplicant, restoring previous state");
+        return true;
     }
+
+    /* ifupdown: kill our wpa_supplicant, remove config, restore previous */
+    char cmd[256];
+    snprintf(cmd, sizeof(cmd), "wpa_cli -i %s terminate 2>/dev/null", iface);
+    run_cmd(cmd);
+    snprintf(cmd, sizeof(cmd), "ifdown %s 2>&1", iface);
+    run_cmd(cmd);
+
+    unlink("/etc/network/interfaces.d/infrafid");
+
+    /* Remove any infrafid wpa_supplicant configs */
+    run_cmd("rm -f /etc/wpa_supplicant/wpa_supplicant-infrafid-*.conf 2>/dev/null");
+
+    snprintf(cmd, sizeof(cmd), "ifup %s 2>&1", iface);
+    run_cmd(cmd);
 
     syslog(LOG_INFO, "infrafid: removed infrafid config, reverted to previous state");
     return true;
