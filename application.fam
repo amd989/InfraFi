@@ -1,6 +1,6 @@
 App(
-    appid="wi_fir",
-    name="Wi-FIR",
+    appid="infrafi",
+    name="InfraFi",
     apptype=FlipperAppType.EXTERNAL,
     entry_point="wi_fir_app",
     requires=["gui", "notification", "storage", "nfc"],

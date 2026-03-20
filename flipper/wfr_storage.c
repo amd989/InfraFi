@@ -3,7 +3,7 @@
 #include <furi.h>
 #include <string.h>
 
-#define WFR_FILE_TYPE    "Wi-FIR Credentials"
+#define WFR_FILE_TYPE    "InfraFi Credentials"
 #define WFR_FILE_VERSION 1
 
 /* Sanitize a string for use as a filename.

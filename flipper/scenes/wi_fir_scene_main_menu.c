@@ -33,7 +33,7 @@ void wi_fir_scene_main_menu_on_enter(void* context) {
     WiFirApp* app = context;
 
     submenu_reset(app->submenu);
-    submenu_set_header(app->submenu, "Wi-FiR");
+    submenu_set_header(app->submenu, "InfraFi");
     submenu_add_item(
         app->submenu,
         "Send Credentials",

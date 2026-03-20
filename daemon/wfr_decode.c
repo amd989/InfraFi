@@ -22,7 +22,7 @@ static bool wfr_decode_check_timeout(WfrDecoder* dec) {
     if(now.tv_nsec < dec->start_time.tv_nsec) elapsed--;
 
     if(elapsed >= WFR_TIMEOUT_SEC) {
-        syslog(LOG_WARNING, "wifird: transmission timeout after %lds", elapsed);
+        syslog(LOG_WARNING, "infrafid: transmission timeout after %lds", elapsed);
         wfr_decode_reset(dec);
         return true;
     }
@@ -38,7 +38,7 @@ int wfr_decode_feed_scancode(
 
     if(wfr_decode_check_timeout(dec)) return -1;
 
-    /* Filter: must have Wi-FiR magic in high nibble */
+    /* Filter: must have InfraFi magic in high nibble */
     if((rc6_address & WFR_RC6_MAGIC_MASK) != WFR_RC6_MAGIC) return 0;
 
     uint8_t frame_type = rc6_address & WFR_RC6_TYPE_MASK;
@@ -48,7 +48,7 @@ int wfr_decode_feed_scancode(
     case WFR_RC6_TYPE_START: {
         uint8_t total_len = rc6_command;
         if(total_len == 0) {
-            syslog(LOG_WARNING, "wifird: START with zero length");
+            syslog(LOG_WARNING, "infrafid: START with zero length");
             return -1;
         }
 
@@ -59,7 +59,7 @@ int wfr_decode_feed_scancode(
             clock_gettime(CLOCK_MONOTONIC, &dec->start_time);
             syslog(
                 LOG_INFO,
-                "wifird: START retransmit pass %d (len=%d)",
+                "infrafid: START retransmit pass %d (len=%d)",
                 pass,
                 total_len);
             return 0;
@@ -71,7 +71,7 @@ int wfr_decode_feed_scancode(
         dec->current_pass = pass;
         dec->in_transmission = true;
         clock_gettime(CLOCK_MONOTONIC, &dec->start_time);
-        syslog(LOG_INFO, "wifird: START received (len=%d)", total_len);
+        syslog(LOG_INFO, "infrafid: START received (len=%d)", total_len);
         return 0;
     }
 
@@ -83,7 +83,7 @@ int wfr_decode_feed_scancode(
         dec->write_cursor++;
         syslog(
             LOG_DEBUG,
-            "wifird: DATA byte %d/%d (0x%02x '%c')",
+            "infrafid: DATA byte %d/%d (0x%02x '%c')",
             dec->write_cursor,
             dec->expected_len,
             rc6_command,
@@ -97,7 +97,7 @@ int wfr_decode_feed_scancode(
         if(dec->write_cursor != dec->expected_len) {
             syslog(
                 LOG_INFO,
-                "wifird: END but only %d/%d bytes — waiting for retransmit",
+                "infrafid: END but only %d/%d bytes — waiting for retransmit",
                 dec->write_cursor,
                 dec->expected_len);
             return 0;
@@ -109,7 +109,7 @@ int wfr_decode_feed_scancode(
         if(expected_crc != computed_crc) {
             syslog(
                 LOG_WARNING,
-                "wifird: CRC-8 mismatch (got 0x%02x, expected 0x%02x) — waiting for retransmit",
+                "infrafid: CRC-8 mismatch (got 0x%02x, expected 0x%02x) — waiting for retransmit",
                 computed_crc,
                 expected_crc);
             /* Don't reset — next retransmit pass will try again */
@@ -119,13 +119,13 @@ int wfr_decode_feed_scancode(
 
         /* Success */
         if((size_t)dec->expected_len >= out_size) {
-            syslog(LOG_ERR, "wifird: output buffer too small");
+            syslog(LOG_ERR, "infrafid: output buffer too small");
             wfr_decode_reset(dec);
             return -1;
         }
         memcpy(out, dec->payload_buf, dec->expected_len);
         out[dec->expected_len] = '\0';
-        syslog(LOG_INFO, "wifird: transmission complete (%d bytes)", dec->expected_len);
+        syslog(LOG_INFO, "infrafid: transmission complete (%d bytes)", dec->expected_len);
 
         int result_len = dec->expected_len;
         wfr_decode_reset(dec);

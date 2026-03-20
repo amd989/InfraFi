@@ -3,7 +3,7 @@
 #include "protocol/wfr_protocol.h"
 #include <storage/storage.h>
 
-#define WFR_SAVE_DIR      "/ext/apps_data/wi_fir"
+#define WFR_SAVE_DIR      "/ext/apps_data/infrafi"
 #define WFR_SAVE_EXT      ".wfir"
 #define WFR_SAVED_MAX     20
 #define WFR_FILENAME_MAX  64

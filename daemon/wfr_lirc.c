@@ -11,20 +11,20 @@
 int wfr_lirc_open(const char* device) {
     int fd = open(device, O_RDONLY);
     if(fd < 0) {
-        syslog(LOG_ERR, "wifird: failed to open %s: %s", device, strerror(errno));
+        syslog(LOG_ERR, "infrafid: failed to open %s: %s", device, strerror(errno));
         return -1;
     }
 
     /* Set receive mode to SCANCODE — kernel decodes RC-6 for us */
     unsigned int mode = LIRC_MODE_SCANCODE;
     if(ioctl(fd, LIRC_SET_REC_MODE, &mode) < 0) {
-        syslog(LOG_ERR, "wifird: LIRC_SET_REC_MODE SCANCODE failed: %s", strerror(errno));
+        syslog(LOG_ERR, "infrafid: LIRC_SET_REC_MODE SCANCODE failed: %s", strerror(errno));
         close(fd);
         return -1;
     }
-    syslog(LOG_INFO, "wifird: set receive mode to SCANCODE");
+    syslog(LOG_INFO, "infrafid: set receive mode to SCANCODE");
 
-    syslog(LOG_INFO, "wifird: opened %s (fd=%d)", device, fd);
+    syslog(LOG_INFO, "infrafid: opened %s (fd=%d)", device, fd);
     return fd;
 }
 
@@ -40,13 +40,13 @@ int wfr_lirc_read_scancode(int fd, uint8_t* rc6_address, uint8_t* rc6_command) {
         ssize_t n = read(fd, &sc, sizeof(sc));
         if(n != (ssize_t)sizeof(sc)) {
             if(n < 0 && errno != EINTR) {
-                syslog(LOG_ERR, "wifird: scancode read error: %s", strerror(errno));
+                syslog(LOG_ERR, "infrafid: scancode read error: %s", strerror(errno));
             }
             return -1;
         }
 
         syslog(LOG_DEBUG,
-            "wifird: scancode proto=%u flags=0x%x scancode=0x%llx",
+            "infrafid: scancode proto=%u flags=0x%x scancode=0x%llx",
             (unsigned)sc.rc_proto,
             (unsigned)sc.flags,
             (unsigned long long)sc.scancode);

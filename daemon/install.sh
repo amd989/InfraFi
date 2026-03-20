@@ -3,7 +3,7 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-echo "=== Wi-FiR Daemon Installer ==="
+echo "=== InfraFi Daemon Installer ==="
 
 # Check for root
 if [ "$(id -u)" -ne 0 ]; then
@@ -25,7 +25,7 @@ if [ -d "$RC_DIR" ]; then
     echo "  Active protocols: $(cat "$RC_DIR/protocols")"
 
     # Persist via udev rule so it survives reboot
-    UDEV_RULE="/etc/udev/rules.d/99-wifird-rc6.rules"
+    UDEV_RULE="/etc/udev/rules.d/99-infrafid-rc6.rules"
     echo 'ACTION=="add", SUBSYSTEM=="rc", ATTR{protocols}="rc-6"' > "$UDEV_RULE"
     echo "  Created udev rule: $UDEV_RULE"
 else
@@ -33,7 +33,7 @@ else
 fi
 
 # Build
-echo "Building wifird..."
+echo "Building infrafid..."
 cd "$SCRIPT_DIR"
 make clean
 make
@@ -45,10 +45,10 @@ make install
 # Enable and start service
 echo "Enabling systemd service..."
 systemctl daemon-reload
-systemctl enable wifird
-systemctl start wifird
+systemctl enable infrafid
+systemctl start infrafid
 
 echo ""
 echo "=== Installation complete ==="
-echo "Status: systemctl status wifird"
-echo "Logs:   journalctl -u wifird -f"
+echo "Status: systemctl status infrafid"
+echo "Logs:   journalctl -u infrafid -f"

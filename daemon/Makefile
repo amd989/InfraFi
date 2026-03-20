@@ -5,7 +5,7 @@ LDFLAGS =
 # Source files
 SRCS = main.c wfr_lirc.c wfr_decode.c wfr_network.c ../flipper/protocol/wfr_protocol.c
 OBJS = $(SRCS:.c=.o)
-TARGET = wifird
+TARGET = infrafid
 
 PREFIX ?= /usr/local
 BINDIR = $(PREFIX)/bin
@@ -22,5 +22,5 @@ clean:
 
 install: $(TARGET)
 	install -Dm755 $(TARGET) $(DESTDIR)$(BINDIR)/$(TARGET)
-	install -Dm644 wifird.service $(DESTDIR)/etc/systemd/system/wifird.service
-	@echo "Installed. Run: systemctl daemon-reload && systemctl enable --now wifird"
+	install -Dm644 infrafid.service $(DESTDIR)/etc/systemd/system/infrafid.service
+	@echo "Installed. Run: systemctl daemon-reload && systemctl enable --now infrafid"

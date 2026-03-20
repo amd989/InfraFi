@@ -9,14 +9,14 @@ extern "C" {
 #endif
 
 /*
- * Wi-FiR Protocol — RC-6 Scancode Encoding
+ * InfraFi Protocol — RC-6 Scancode Encoding
  *
  * Uses standard RC-6 IR messages (decoded by the kernel) instead of raw timings.
  * Each RC-6 message carries 1 byte of payload via: address (framing) + command (data).
  * Payload is a WiFi QR string: WIFI:T:<type>;S:<ssid>;P:<pass>;H:<hidden>;;
  *
  * Address byte layout:
- *   Bits 7-4: Magic = 0xA (identifies Wi-FiR messages)
+ *   Bits 7-4: Magic = 0xA (identifies InfraFi messages)
  *   Bits 3-2: Frame type (00=START, 01=DATA, 10=END)
  *   Bits 1-0: Pass number (0-3, which retransmission attempt)
  *

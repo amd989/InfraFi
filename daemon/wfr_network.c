@@ -39,10 +39,10 @@ static size_t shell_escape(const char* src, char* dst, size_t dst_size) {
 
 /* Run a command and return its exit status. */
 static int run_cmd(const char* cmd) {
-    syslog(LOG_DEBUG, "wifird: exec: %s", cmd);
+    syslog(LOG_DEBUG, "infrafid: exec: %s", cmd);
     int status = system(cmd);
     if(status == -1) {
-        syslog(LOG_ERR, "wifird: system() failed for: %s", cmd);
+        syslog(LOG_ERR, "infrafid: system() failed for: %s", cmd);
         return -1;
     }
     return WEXITSTATUS(status);
@@ -52,7 +52,7 @@ static int run_cmd(const char* cmd) {
 static bool run_cmd_output(const char* cmd, char* out, size_t out_size) {
     FILE* fp = popen(cmd, "r");
     if(!fp) {
-        syslog(LOG_ERR, "wifird: popen() failed for: %s", cmd);
+        syslog(LOG_ERR, "infrafid: popen() failed for: %s", cmd);
         return false;
     }
 
@@ -114,25 +114,26 @@ static int wait_for_wpa_association(const char* iface, int max_wait) {
         const char* state = get_wpa_state(iface);
 
         if(!state) {
-            syslog(LOG_DEBUG, "wifird: wpa_cli not available, falling back to connectivity check");
+            syslog(LOG_DEBUG, "infrafid: wpa_cli not available, falling back to connectivity check");
             return 0; /* can't determine state, caller should check connectivity */
         }
 
-        syslog(LOG_DEBUG, "wifird: wpa_state=%s (%ds elapsed)", state, elapsed + 2);
+        syslog(LOG_DEBUG, "infrafid: wpa_state=%s (%ds elapsed)", state, elapsed + 2);
 
         if(strcmp(state, "COMPLETED") == 0) {
-            syslog(LOG_INFO, "wifird: WPA association completed");
+            syslog(LOG_INFO, "redfid: WPA association completed");
+            syslog(LOG_INFO, "infrafid: WPA association completed for %s", target_ssid);
             return 1;
         }
 
         /* These states mean auth definitively failed */
         if(strcmp(state, "DISCONNECTED") == 0 && elapsed > 6) {
-            syslog(LOG_ERR, "wifird: WPA disconnected — wrong password or network not found");
+            syslog(LOG_ERR, "infrafid: WPA disconnected — wrong password or network not found");
             return -1;
         }
     }
 
-    syslog(LOG_WARNING, "wifird: WPA association timed out after %ds", max_wait);
+    syslog(LOG_WARNING, "infrafid: WPA association timed out after %ds", max_wait);
     return 0;
 }
 
@@ -153,15 +154,15 @@ static bool wait_for_dhcp(const char* iface, int max_wait) {
         if(run_cmd_output(cmd, ip, sizeof(ip)) && ip[0]) {
             /* Ignore link-local (169.254.x.x) */
             if(strncmp(ip, "169.254.", 8) != 0) {
-                syslog(LOG_INFO, "wifird: DHCP obtained IP %s on %s", ip, iface);
+                syslog(LOG_INFO, "infrafid: DHCP obtained IP %s on %s", ip, iface);
                 return true;
             }
         }
 
-        syslog(LOG_DEBUG, "wifird: waiting for DHCP... (%ds elapsed)", elapsed + 2);
+        syslog(LOG_DEBUG, "infrafid: waiting for DHCP... (%ds elapsed)", elapsed + 2);
     }
 
-    syslog(LOG_WARNING, "wifird: DHCP timed out after %ds on %s", max_wait, iface);
+    syslog(LOG_WARNING, "infrafid: DHCP timed out after %ds on %s", max_wait, iface);
     return false;
 }
 
@@ -179,7 +180,7 @@ static bool detect_wifi_iface(char* out, size_t out_size) {
         return true;
     }
 
-    syslog(LOG_ERR, "wifird: no WiFi interface found");
+    syslog(LOG_ERR, "infrafid: no WiFi interface found");
     return false;
 }
 
@@ -224,7 +225,7 @@ static bool wfr_net_connect_nmcli(const WfrWifiCreds* creds) {
     char escaped_pass[256];
 
     if(!shell_escape(creds->ssid, escaped_ssid, sizeof(escaped_ssid))) {
-        syslog(LOG_ERR, "wifird: SSID too long to escape");
+        syslog(LOG_ERR, "infrafid: SSID too long to escape");
         return false;
     }
 
@@ -239,7 +240,7 @@ static bool wfr_net_connect_nmcli(const WfrWifiCreds* creds) {
             creds->hidden ? " hidden yes" : "");
     } else {
         if(!shell_escape(creds->password, escaped_pass, sizeof(escaped_pass))) {
-            syslog(LOG_ERR, "wifird: password too long to escape");
+            syslog(LOG_ERR, "infrafid: password too long to escape");
             return false;
         }
         snprintf(
@@ -251,42 +252,42 @@ static bool wfr_net_connect_nmcli(const WfrWifiCreds* creds) {
             creds->hidden ? " hidden yes" : "");
     }
 
-    syslog(LOG_INFO, "wifird: connecting to SSID: %s (security=%d)", creds->ssid, creds->security);
+    syslog(LOG_INFO, "infrafid: connecting to SSID: %s (security=%d)", creds->ssid, creds->security);
 
     int status = run_cmd(cmd);
     if(status != 0) {
-        syslog(LOG_ERR, "wifird: nmcli connect failed (exit %d)", status);
+        syslog(LOG_ERR, "infrafid: nmcli connect failed (exit %d)", status);
         return false;
     }
 
     sleep(3);
 
     if(!verify_connectivity()) {
-        syslog(LOG_WARNING, "wifird: connected but no internet connectivity");
+        syslog(LOG_WARNING, "infrafid: connected but no internet connectivity");
     }
 
-    syslog(LOG_INFO, "wifird: successfully connected to %s", creds->ssid);
+    syslog(LOG_INFO, "infrafid: successfully connected to %s", creds->ssid);
     return true;
 }
 
 static bool wfr_net_connect_interfaces(const WfrWifiCreds* creds) {
     char iface[32];
     if(!detect_wifi_iface(iface, sizeof(iface))) {
-        syslog(LOG_ERR, "wifird: cannot connect — no WiFi interface");
+        syslog(LOG_ERR, "infrafid: cannot connect — no WiFi interface");
         return false;
     }
 
-    syslog(LOG_INFO, "wifird: using WiFi interface: %s", iface);
+    syslog(LOG_INFO, "infrafid: using WiFi interface: %s", iface);
 
-    const char* conf_path = "/etc/network/interfaces.d/wifird";
+    const char* conf_path = "/etc/network/interfaces.d/infrafid";
     char wpa_conf_path[128];
     snprintf(wpa_conf_path, sizeof(wpa_conf_path),
-        "/etc/wpa_supplicant/wpa_supplicant-wifird-%s.conf", iface);
+        "/etc/wpa_supplicant/wpa_supplicant-infrafid-%s.conf", iface);
 
     /* Write wpa_supplicant config */
     FILE* wpa = fopen(wpa_conf_path, "w");
     if(!wpa) {
-        syslog(LOG_ERR, "wifird: cannot write %s: %s", wpa_conf_path, strerror(errno));
+        syslog(LOG_ERR, "infrafid: cannot write %s: %s", wpa_conf_path, strerror(errno));
         return false;
     }
     fprintf(wpa, "ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev\n");
@@ -310,17 +311,17 @@ static bool wfr_net_connect_interfaces(const WfrWifiCreds* creds) {
     /* Write interfaces config */
     FILE* ifcfg = fopen(conf_path, "w");
     if(!ifcfg) {
-        syslog(LOG_ERR, "wifird: cannot write %s: %s", conf_path, strerror(errno));
+        syslog(LOG_ERR, "infrafid: cannot write %s: %s", conf_path, strerror(errno));
         unlink(wpa_conf_path);
         return false;
     }
-    fprintf(ifcfg, "# Managed by wifird\n");
+    fprintf(ifcfg, "# Managed by infrafid\n");
     fprintf(ifcfg, "auto %s\n", iface);
     fprintf(ifcfg, "iface %s inet dhcp\n", iface);
     fprintf(ifcfg, "    wpa-conf %s\n", wpa_conf_path);
     fclose(ifcfg);
 
-    syslog(LOG_INFO, "wifird: wrote config, bringing up %s", iface);
+    syslog(LOG_INFO, "infrafid: wrote config, bringing up %s", iface);
 
     /* Bring interface down and back up instead of full networking restart
      * to avoid disrupting other interfaces (e.g. ethernet) */
@@ -328,27 +329,27 @@ static bool wfr_net_connect_interfaces(const WfrWifiCreds* creds) {
     snprintf(cmd, sizeof(cmd), "ifdown %s 2>&1; ifup %s 2>&1", iface, iface);
     int status = run_cmd(cmd);
     if(status != 0) {
-        syslog(LOG_WARNING, "wifird: ifup exited %d (may still be connecting)", status);
+        syslog(LOG_WARNING, "infrafid: ifup exited %d (may still be connecting)", status);
     }
 
     /* Stage 1: wait for WPA authentication (up to 20 seconds) */
     int wpa_result = wait_for_wpa_association(iface, 20);
     if(wpa_result < 0) {
-        syslog(LOG_ERR, "wifird: WPA authentication failed for %s", creds->ssid);
+        syslog(LOG_ERR, "infrafid: WPA authentication failed for %s", creds->ssid);
         return false;
     }
 
     /* Stage 2: wait for DHCP (up to 15 seconds) */
     if(!wait_for_dhcp(iface, 15)) {
-        syslog(LOG_ERR, "wifird: no IP address obtained on %s", iface);
+        syslog(LOG_ERR, "infrafid: no IP address obtained on %s", iface);
         return false;
     }
 
     /* Stage 3: verify actual internet connectivity */
     if(verify_connectivity()) {
-        syslog(LOG_INFO, "wifird: connected to %s with internet access", creds->ssid);
+        syslog(LOG_INFO, "infrafid: connected to %s with internet access", creds->ssid);
     } else {
-        syslog(LOG_WARNING, "wifird: connected to %s but no internet (DNS failed)", creds->ssid);
+        syslog(LOG_WARNING, "infrafid: connected to %s but no internet (DNS failed)", creds->ssid);
         /* Still return true — WiFi link is up even without internet */
     }
 
@@ -358,7 +359,7 @@ static bool wfr_net_connect_interfaces(const WfrWifiCreds* creds) {
 bool wfr_net_connect(const WfrWifiCreds* creds) {
     if(!creds || creds->ssid[0] == '\0') return false;
 
-    syslog(LOG_INFO, "wifird: connecting to SSID: %s (security=%d, hidden=%d)",
+    syslog(LOG_INFO, "infrafid: connecting to SSID: %s (security=%d, hidden=%d)",
         creds->ssid, creds->security, creds->hidden);
 
     if(wfr_net_has_networkmanager()) {
@@ -371,7 +372,7 @@ bool wfr_net_connect(const WfrWifiCreds* creds) {
 bool wfr_net_rollback(const char* ssid) {
     if(!ssid || ssid[0] == '\0') return false;
 
-    syslog(LOG_INFO, "wifird: rolling back to previous SSID: %s", ssid);
+    syslog(LOG_INFO, "infrafid: rolling back to previous SSID: %s", ssid);
 
     if(wfr_net_has_networkmanager()) {
         char escaped_ssid[256];
@@ -381,10 +382,10 @@ bool wfr_net_rollback(const char* ssid) {
         snprintf(cmd, sizeof(cmd), "nmcli con up %s 2>&1", escaped_ssid);
         int status = run_cmd(cmd);
         if(status != 0) {
-            syslog(LOG_ERR, "wifird: rollback to %s failed (exit %d)", ssid, status);
+            syslog(LOG_ERR, "infrafid: rollback to %s failed (exit %d)", ssid, status);
             return false;
         }
-        syslog(LOG_INFO, "wifird: rolled back to %s", ssid);
+        syslog(LOG_INFO, "infrafid: rolled back to %s", ssid);
         return true;
     }
 
@@ -396,10 +397,10 @@ bool wfr_net_rollback(const char* ssid) {
         run_cmd(cmd);
     }
 
-    unlink("/etc/network/interfaces.d/wifird");
+    unlink("/etc/network/interfaces.d/redfid");
 
-    /* Remove any wifird wpa_supplicant configs */
-    run_cmd("rm -f /etc/wpa_supplicant/wpa_supplicant-wifird-*.conf 2>/dev/null");
+    /* Remove any redfid wpa_supplicant configs */
+    run_cmd("rm -f /etc/wpa_supplicant/wpa_supplicant-redfid-*.conf 2>/dev/null");
 
     if(iface[0]) {
         char cmd[256];
@@ -407,6 +408,6 @@ bool wfr_net_rollback(const char* ssid) {
         run_cmd(cmd);
     }
 
-    syslog(LOG_INFO, "wifird: removed wifird config, reverted to previous state");
+    syslog(LOG_INFO, "infrafid: removed infrafid config, reverted to previous state");
     return true;
 }

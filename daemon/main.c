@@ -100,10 +100,10 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    openlog("wifird", LOG_PID | (foreground ? LOG_PERROR : 0), LOG_DAEMON);
+    openlog("infrafid", LOG_PID | (foreground ? LOG_PERROR : 0), LOG_DAEMON);
     setlogmask(LOG_UPTO(log_level));
 
-    syslog(LOG_INFO, "wifird starting (device=%s)", device);
+    syslog(LOG_INFO, "infrafid starting (device=%s)", device);
 
     struct sigaction sa = {0};
     sa.sa_handler = signal_handler;
@@ -121,7 +121,7 @@ int main(int argc, char* argv[]) {
     wfr_decode_init(&decoder);
     char payload[WFR_MAX_TOTAL_PAYLOAD + 1];
 
-    syslog(LOG_INFO, "wifird ready, listening for IR transmissions");
+    syslog(LOG_INFO, "infrafid ready, listening for IR transmissions");
 
     while(running) {
         uint8_t address, command;
@@ -138,7 +138,7 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    syslog(LOG_INFO, "wifird shutting down");
+    syslog(LOG_INFO, "infrafid shutting down");
     wfr_lirc_close(lirc_fd);
     closelog();
     return 0;

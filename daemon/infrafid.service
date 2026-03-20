@@ -1,11 +1,11 @@
 [Unit]
-Description=Wi-FiR IR WiFi Credential Receiver
+Description=InfraFi IR WiFi Credential Receiver
 After=network.target
 Wants=network.target
 
 [Service]
 Type=simple
-ExecStart=/usr/local/bin/wifird --foreground
+ExecStart=/usr/local/bin/infrafid --foreground
 Restart=always
 RestartSec=5
 User=root
@@ -14,7 +14,7 @@ Group=root
 # Logging goes to syslog/journald
 StandardOutput=journal
 StandardError=journal
-SyslogIdentifier=wifird
+SyslogIdentifier=infrafid
 
 [Install]
 WantedBy=multi-user.target

@@ -7,7 +7,7 @@
 #include <time.h>
 
 /*
- * Wi-FiR scancode decoder.
+ * InfraFi scancode decoder.
  * Reassembles RC-6 messages (address + command) into a WiFi credential payload.
  * Each DATA message carries one byte of the payload.
  */
