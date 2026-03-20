@@ -11,8 +11,14 @@
 #include <gui/modules/popup.h>
 #include <gui/modules/loading.h>
 #include <notification/notification_messages.h>
+#include <storage/storage.h>
+#include <nfc/nfc.h>
+#include <nfc/nfc_poller.h>
+#include <nfc/protocols/mf_ultralight/mf_ultralight_poller.h>
+#include <nfc/protocols/mf_ultralight/mf_ultralight.h>
 
 #include "protocol/wfr_protocol.h"
+#include "wfr_storage.h"
 #include "scenes/wi_fir_scene.h"
 
 /* View IDs for ViewDispatcher */
@@ -41,7 +47,14 @@ typedef struct {
     Popup* popup;
     Loading* loading;
 
-    /* WiFi credential data */
+    /* Storage */
+    Storage* storage;
+
+    /* NFC (allocated per-scene to avoid holding the HAL) */
+    Nfc* nfc;
+    NfcPoller* nfc_poller;
+
+    /* WiFi credential data (current working set) */
     char ssid[WFR_SSID_MAX_LEN + 1];
     char password[WFR_PASS_MAX_LEN + 1];
     uint8_t security_type;
@@ -52,6 +65,17 @@ typedef struct {
 
     /* Confirm screen text buffer */
     char confirm_text[128];
+
+    /* NFC scan result */
+    WfrWifiCreds nfc_creds;
+
+    /* Saved networks list (populated by saved scene) */
+    char saved_ssids[WFR_SAVED_MAX][WFR_SSID_MAX_LEN + 1];
+    char saved_files[WFR_SAVED_MAX][WFR_FILENAME_MAX];
+    uint8_t saved_count;
+
+    /* Currently selected saved file (for delete from confirm screen) */
+    char selected_saved_file[WFR_FILENAME_MAX];
 } WiFirApp;
 
 /* App entry point */

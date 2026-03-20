@@ -44,6 +44,7 @@ bool wi_fir_scene_edit_security_on_event(void* context, SceneManagerEvent event)
 
     if(event.type == SceneManagerEventTypeCustom) {
         if(event.event == WiFirCustomEventSecurityDone) {
+            app->selected_saved_file[0] = '\0';
             scene_manager_next_scene(app->scene_manager, WiFirSceneConfirm);
             consumed = true;
         }

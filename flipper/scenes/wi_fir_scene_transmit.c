@@ -1,5 +1,6 @@
 #include "../wi_fir.h"
 #include "../wfr_encode.h"
+#include "../wfr_storage.h"
 #include <notification/notification_messages.h>
 
 void wi_fir_scene_transmit_on_enter(void* context) {
@@ -41,6 +42,15 @@ bool wi_fir_scene_transmit_on_event(void* context, SceneManagerEvent event) {
 
     if(event.type == SceneManagerEventTypeCustom) {
         if(event.event == WiFirCustomEventTransmitDone) {
+            /* Auto-save credentials to SD card */
+            WfrWifiCreds save_creds;
+            memset(&save_creds, 0, sizeof(save_creds));
+            strncpy(save_creds.ssid, app->ssid, WFR_SSID_MAX_LEN);
+            strncpy(save_creds.password, app->password, WFR_PASS_MAX_LEN);
+            save_creds.security = app->security_type;
+            save_creds.hidden = app->hidden;
+            wfr_storage_save(app->storage, &save_creds);
+
             /* Show success popup */
             popup_reset(app->popup);
             popup_set_header(app->popup, "Sent!", 64, 20, AlignCenter, AlignCenter);

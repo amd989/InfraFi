@@ -10,6 +10,8 @@ typedef enum {
     WiFirSceneEditSecurity,
     WiFirSceneConfirm,
     WiFirSceneTransmit,
+    WiFirSceneScanNfc,
+    WiFirSceneSaved,
     WiFirSceneAbout,
     WiFirSceneCount,
 } WiFirScene;
@@ -17,6 +19,8 @@ typedef enum {
 /* Custom event IDs */
 typedef enum {
     WiFirCustomEventMainMenuCredentials,
+    WiFirCustomEventMainMenuScanNfc,
+    WiFirCustomEventMainMenuSaved,
     WiFirCustomEventMainMenuAbout,
     WiFirCustomEventTextInputDone,
     WiFirCustomEventSecurityDone,
@@ -24,6 +28,13 @@ typedef enum {
     WiFirCustomEventConfirmBack,
     WiFirCustomEventTransmitDone,
     WiFirCustomEventTransmitFail,
+    WiFirCustomEventNfcWifiFound,
+    WiFirCustomEventNfcNotWifi,
+    WiFirCustomEventNfcError,
+    WiFirCustomEventSavedSelected,
+    WiFirCustomEventConfirmDelete,
+    WiFirCustomEventDeleteConfirmed,
+    WiFirCustomEventDeleteCancelled,
 } WiFirCustomEvent;
 
 /* Scene manager handlers (defined in wi_fir_scene.c) */
@@ -53,6 +64,14 @@ void wi_fir_scene_confirm_on_exit(void* context);
 void wi_fir_scene_transmit_on_enter(void* context);
 bool wi_fir_scene_transmit_on_event(void* context, SceneManagerEvent event);
 void wi_fir_scene_transmit_on_exit(void* context);
+
+void wi_fir_scene_scan_nfc_on_enter(void* context);
+bool wi_fir_scene_scan_nfc_on_event(void* context, SceneManagerEvent event);
+void wi_fir_scene_scan_nfc_on_exit(void* context);
+
+void wi_fir_scene_saved_on_enter(void* context);
+bool wi_fir_scene_saved_on_event(void* context, SceneManagerEvent event);
+void wi_fir_scene_saved_on_exit(void* context);
 
 void wi_fir_scene_about_on_enter(void* context);
 bool wi_fir_scene_about_on_event(void* context, SceneManagerEvent event);

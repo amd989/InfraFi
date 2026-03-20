@@ -20,6 +20,7 @@ static WiFirApp* wi_fir_alloc(void) {
     /* Open system services */
     app->gui = furi_record_open(RECORD_GUI);
     app->notifications = furi_record_open(RECORD_NOTIFICATION);
+    app->storage = furi_record_open(RECORD_STORAGE);
 
     /* Allocate ViewDispatcher and SceneManager */
     app->view_dispatcher = view_dispatcher_alloc();
@@ -82,6 +83,7 @@ static void wi_fir_free(WiFirApp* app) {
     view_dispatcher_free(app->view_dispatcher);
 
     /* Close system services */
+    furi_record_close(RECORD_STORAGE);
     furi_record_close(RECORD_GUI);
     furi_record_close(RECORD_NOTIFICATION);
 
