@@ -1,0 +1,5 @@
+Component: main
+Origin: infrafid
+Label: infrafid
+Architecture: arm64
+Description: InfraFi IR WiFi credential receiver daemon

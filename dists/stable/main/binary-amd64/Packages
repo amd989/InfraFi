@@ -1,0 +1,42 @@
+Package: infrafid
+Version: 1.0-1
+Architecture: amd64
+Maintainer: amd989 <amd989@users.noreply.github.com>
+Installed-Size: 55
+Depends: libc6 (>= 2.34)
+Recommends: network-manager | wpasupplicant
+Homepage: https://github.com/amd989/infrafi
+Priority: optional
+Section: net
+Filename: pool/main/i/infrafid/infrafid_1.0-1_amd64.deb
+Size: 15648
+SHA256: a6e48012daf3368d8641d5bf25bdd51a4c6ca0ec8ffcfca2089f78c941a5d0ce
+SHA1: 959984a097be5870e769b6adde4f9eeeaa3b4937
+MD5sum: 2ebddd628f6fdfda9034a89e032571e5
+Description: InfraFi IR WiFi credential receiver daemon
+ Receives WiFi credentials transmitted via infrared (RC-6 protocol)
+ from a Flipper Zero running the InfraFi app. Automatically connects
+ to the transmitted WiFi network using NetworkManager, systemd-networkd,
+ or ifupdown.
+ .
+ Designed for headless Linux servers with CIR (Consumer IR) receivers
+ such as the ITE8708 found in Intel NUCs.
+
+Package: infrafid-dbgsym
+Source: infrafid
+Version: 1.0-1
+Auto-Built-Package: debug-symbols
+Architecture: amd64
+Maintainer: amd989 <amd989@users.noreply.github.com>
+Installed-Size: 18
+Depends: infrafid (= 1.0-1)
+Priority: optional
+Section: debug
+Filename: pool/main/i/infrafid/infrafid-dbgsym_1.0-1_amd64.deb
+Size: 3060
+SHA256: f0d0a412a0203f35c4a4434da34f406c6b4f4861997953edd09373823ce4a67a
+SHA1: 8e0028faca9447da2accd7305d39be16751228ff
+MD5sum: 48b3afed412f11dcbf45b3f8a3139d1d
+Description: debug symbols for infrafid
+Build-Ids: 8730cd3a0dd511073b0f391befa0859b417c279c
+

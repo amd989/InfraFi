@@ -1,0 +1,47 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA512
+
+Origin: infrafid
+Label: infrafid
+Codename: stable
+Date: Sat, 21 Mar 2026 20:14:07 UTC
+Architectures: amd64 arm64 armhf
+Components: main
+Description: InfraFi IR WiFi credential receiver daemon
+MD5Sum:
+ cb064467ea1cb4057ae60d7bf22cabff 1468 main/binary-amd64/Packages
+ eb52bbcbda8432a3e088cf9e9a5264ac 824 main/binary-amd64/Packages.gz
+ 4f7235da11b50717c4e1abe2be43cd5a 125 main/binary-amd64/Release
+ 74669f0e174c6a66e0e06b248b2707b1 1468 main/binary-arm64/Packages
+ 6022176a4a56cce0718ea74179ff62d6 823 main/binary-arm64/Packages.gz
+ f402bc29d6e34db3d99b78de7e684419 125 main/binary-arm64/Release
+ 380d75edbef9c73f950c7cbc5db8826b 1468 main/binary-armhf/Packages
+ 49ff4e38f2e5040d0ba93206e1c11891 824 main/binary-armhf/Packages.gz
+ b1925ce0ae092d5b95b72f732ed6644a 125 main/binary-armhf/Release
+SHA1:
+ 1c0ab2002c6d8a062ad3a3169d79949cad2cbad9 1468 main/binary-amd64/Packages
+ 68cef2a207628f147563288f28b8c9b0d1a41a5d 824 main/binary-amd64/Packages.gz
+ 641532c520fe2fa9e51a26cb969c6939093779a2 125 main/binary-amd64/Release
+ 73fe89018d618b8c0967c2e47eb9dfea4116dbe1 1468 main/binary-arm64/Packages
+ 659844430a6cd557cbeb066dfe0d67679c9e85ab 823 main/binary-arm64/Packages.gz
+ 16fa04a887803546820d060d2bf5b237d6d5b9c9 125 main/binary-arm64/Release
+ 34b99290e81b86e8995e9d55a7cc4201e806f01a 1468 main/binary-armhf/Packages
+ d459f1a084aa5755b4eacfe9d313b09e4b3a4115 824 main/binary-armhf/Packages.gz
+ 6124da1a36e521b68e4fdea4577e5763f69151c5 125 main/binary-armhf/Release
+SHA256:
+ d75967e9ddac123131534a58ab6fd25ac63fa9dfef076f0e715b9e175c83ad3d 1468 main/binary-amd64/Packages
+ fee6527dfccd2f694889fe5a36da6293fa00bfc6e8d98efb4c323699071b0898 824 main/binary-amd64/Packages.gz
+ ffcf560349d39fd2b20b2031000e6a30bbf79c1bcadb24193ac3d15e4c6a0fcf 125 main/binary-amd64/Release
+ 721a7006287573732b90b2bbdb806a904ed7370405d956931fa5f4ecca9eedbd 1468 main/binary-arm64/Packages
+ 1373ce5c0b2246024000a6856d8125827703cbc5942fe115dca0b63458f24ccf 823 main/binary-arm64/Packages.gz
+ 188887bc782a006077b6142fca3b44c23183c4083d28e90a330aff2e67cd9763 125 main/binary-arm64/Release
+ d39a7fdaf56999d6e800f137366670257a63b9cf22fb2539c8aa1c8c8913c91b 1468 main/binary-armhf/Packages
+ f35907e5de626e335d82cc7960a9ead0530b0969209119c416fb217211ece995 824 main/binary-armhf/Packages.gz
+ 08876a14950e00e9a3eacafb04e7f4e142c3d8aab378151026eb3b68d1f2abea 125 main/binary-armhf/Release
+-----BEGIN PGP SIGNATURE-----
+
+iHUEARYKAB0WIQR4ApcagzmD3WDNTB9opm47Dqb4JQUCab78DwAKCRBopm47Dqb4
+JemjAP9gFuHoLJqMUUgd7yeBCxffF/e4Fui2Kbmt9td86e1aYQD/Uw+G38yagYYQ
+IgczEYbcPscy7lVg7EqGxhGTlurn2gg=
+=k5Vn
+-----END PGP SIGNATURE-----
