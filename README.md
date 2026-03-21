@@ -9,16 +9,26 @@ Built for headless servers (NAS boxes, Intel NUCs, etc.) where typing WiFi passw
 ```mermaid
 flowchart LR
     subgraph Flipper Zero
-        A1[Manual Entry] --> A[InfraFi App]
-        A2[NFC Tag Scan] --> A
-        A3[Saved Networks] --> A
+        A[InfraFi App]
+        A1[Manual Entry]
+        A2[NFC Tag Scan]
+        A3[Saved Networks]
+        A1 --> A
+        A2 --> A
+        A3 --> A
     end
 
     subgraph Linux Server
-        B1[LIRC RX] --> B[infrafid daemon] --> B2[WiFi Connect]
+        B[infrafid daemon]
+        B1["IR RX (/dev/lirc0)"]
+        B2[WiFi Connect]
+        B3["IR TX (ACK)"]
+        B1 --> B --> B2
+        B -.-> B3
     end
 
-    A -- IR RC-6 36kHz --> B1
+    A -- "IR (RC-6, 36kHz)" --> B1
+    B3 -. "ACK (OK/FAIL)" .-> A
 ```
 
 The Flipper encodes WiFi credentials as a sequence of **RC-6 IR messages** and blasts them at the server's CIR (Consumer IR) receiver. The `infrafid` daemon decodes the transmission and connects to the network automatically. No pairing, no Bluetooth, no network required — just line-of-sight IR.
