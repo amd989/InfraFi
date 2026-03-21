@@ -576,3 +576,19 @@ bool wfr_net_rollback(const char* ssid) {
     syslog(LOG_INFO, "infrafid: removed infrafid config, reverted to previous state");
     return true;
 }
+
+bool wfr_net_get_ip(char* out, size_t out_size) {
+    char iface[32];
+    if(!detect_wifi_iface(iface, sizeof(iface))) return false;
+
+    char cmd[256];
+    snprintf(cmd, sizeof(cmd),
+        "ip -4 addr show %s 2>/dev/null | grep -oP 'inet \\K[0-9.]+'", iface);
+
+    if(run_cmd_output(cmd, out, out_size) && out[0]) {
+        if(strncmp(out, "169.254.", 8) != 0) {
+            return true;
+        }
+    }
+    return false;
+}

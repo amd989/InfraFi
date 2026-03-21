@@ -12,6 +12,7 @@ static const AppSceneOnEnterCallback wi_fir_scene_on_enter_handlers[] = {
     wi_fir_scene_scan_nfc_on_enter,
     wi_fir_scene_saved_on_enter,
     wi_fir_scene_about_on_enter,
+    wi_fir_scene_settings_on_enter,
 };
 
 static const AppSceneOnEventCallback wi_fir_scene_on_event_handlers[] = {
@@ -24,6 +25,7 @@ static const AppSceneOnEventCallback wi_fir_scene_on_event_handlers[] = {
     wi_fir_scene_scan_nfc_on_event,
     wi_fir_scene_saved_on_event,
     wi_fir_scene_about_on_event,
+    wi_fir_scene_settings_on_event,
 };
 
 static const AppSceneOnExitCallback wi_fir_scene_on_exit_handlers[] = {
@@ -36,6 +38,7 @@ static const AppSceneOnExitCallback wi_fir_scene_on_exit_handlers[] = {
     wi_fir_scene_scan_nfc_on_exit,
     wi_fir_scene_saved_on_exit,
     wi_fir_scene_about_on_exit,
+    wi_fir_scene_settings_on_exit,
 };
 
 const SceneManagerHandlers wi_fir_scene_handlers = {

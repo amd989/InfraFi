@@ -4,6 +4,7 @@ enum {
     MainMenuIndexCredentials,
     MainMenuIndexScanNfc,
     MainMenuIndexSaved,
+    MainMenuIndexSettings,
     MainMenuIndexAbout,
 };
 
@@ -21,6 +22,10 @@ static void wi_fir_scene_main_menu_callback(void* context, uint32_t index) {
     case MainMenuIndexSaved:
         view_dispatcher_send_custom_event(
             app->view_dispatcher, WiFirCustomEventMainMenuSaved);
+        break;
+    case MainMenuIndexSettings:
+        view_dispatcher_send_custom_event(
+            app->view_dispatcher, WiFirCustomEventMainMenuSettings);
         break;
     case MainMenuIndexAbout:
         view_dispatcher_send_custom_event(
@@ -50,6 +55,12 @@ void wi_fir_scene_main_menu_on_enter(void* context) {
         app->submenu,
         "Saved",
         MainMenuIndexSaved,
+        wi_fir_scene_main_menu_callback,
+        app);
+    submenu_add_item(
+        app->submenu,
+        "Settings",
+        MainMenuIndexSettings,
         wi_fir_scene_main_menu_callback,
         app);
     submenu_add_item(
@@ -84,6 +95,12 @@ bool wi_fir_scene_main_menu_on_event(void* context, SceneManagerEvent event) {
             scene_manager_set_scene_state(
                 app->scene_manager, WiFirSceneMainMenu, MainMenuIndexSaved);
             scene_manager_next_scene(app->scene_manager, WiFirSceneSaved);
+            consumed = true;
+            break;
+        case WiFirCustomEventMainMenuSettings:
+            scene_manager_set_scene_state(
+                app->scene_manager, WiFirSceneMainMenu, MainMenuIndexSettings);
+            scene_manager_next_scene(app->scene_manager, WiFirSceneSettings);
             consumed = true;
             break;
         case WiFirCustomEventMainMenuAbout:

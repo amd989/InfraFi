@@ -17,11 +17,14 @@ extern "C" {
  *
  * Address byte layout:
  *   Bits 7-4: Magic = 0xA (identifies InfraFi messages)
- *   Bits 3-2: Frame type (00=START, 01=DATA, 10=END)
+ *   Bits 3-2: Frame type (00=START, 01=DATA, 10=END, 11=ACK)
  *   Bits 1-0: Pass number (0-3, which retransmission attempt)
  *
- * Messages per transmission:
+ * Messages per transmission (Flipper → daemon):
  *   START (len=N) → DATA × N (one byte each) → END (crc8)
+ *
+ * ACK response (daemon → Flipper):
+ *   Same framing. Payload is "OK:<ip>" on success or "FAIL" on failure.
  */
 
 /* RC-6 address byte encoding */
@@ -34,10 +37,20 @@ extern "C" {
 #define WFR_RC6_TYPE_DATA    0x04
 #define WFR_RC6_TYPE_END     0x08
 
+/* Frame type for ACK responses (daemon → Flipper) */
+#define WFR_RC6_TYPE_ACK     0x0C
+
 /* Timing */
 #define WFR_RC6_INTER_MSG_MS      20   /* Delay between RC-6 messages (ms) */
 #define WFR_RC6_RETRANSMIT_GAP_MS 200  /* Gap between retransmission passes */
 #define WFR_RETRANSMIT_COUNT      1
+
+/* ACK timeout — how long Flipper waits for a response (seconds) */
+#define WFR_ACK_TIMEOUT_SEC       30
+
+/* ACK payload prefixes */
+#define WFR_ACK_PREFIX_OK   "OK:"
+#define WFR_ACK_PREFIX_FAIL "FAIL"
 
 /* Protocol limits */
 #define WFR_MAX_TOTAL_PAYLOAD 255

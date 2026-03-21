@@ -148,3 +148,49 @@ bool wfr_storage_delete(Storage* storage, const char* filename) {
     snprintf(path, sizeof(path), "%s/%s", WFR_SAVE_DIR, filename);
     return storage_simply_remove(storage, path);
 }
+
+#define WFR_SETTINGS_TYPE    "InfraFi Settings"
+#define WFR_SETTINGS_VERSION 1
+
+bool wfr_storage_load_settings(Storage* storage, bool* ack_enabled) {
+    FlipperFormat* ff = flipper_format_file_alloc(storage);
+    bool ok = false;
+    FuriString* tmp = furi_string_alloc();
+
+    do {
+        if(!flipper_format_file_open_existing(ff, WFR_SETTINGS_FILE)) break;
+
+        uint32_t version = 0;
+        if(!flipper_format_read_header(ff, tmp, &version)) break;
+        if(furi_string_cmp_str(tmp, WFR_SETTINGS_TYPE) != 0) break;
+        if(version != WFR_SETTINGS_VERSION) break;
+
+        uint32_t ack = 0;
+        if(flipper_format_read_uint32(ff, "WaitForACK", &ack, 1)) {
+            *ack_enabled = (ack != 0);
+        }
+        ok = true;
+    } while(false);
+
+    furi_string_free(tmp);
+    flipper_format_free(ff);
+    return ok;
+}
+
+bool wfr_storage_save_settings(Storage* storage, bool ack_enabled) {
+    storage_simply_mkdir(storage, WFR_SAVE_DIR);
+
+    FlipperFormat* ff = flipper_format_file_alloc(storage);
+    bool ok = false;
+
+    do {
+        if(!flipper_format_file_open_always(ff, WFR_SETTINGS_FILE)) break;
+        if(!flipper_format_write_header_cstr(ff, WFR_SETTINGS_TYPE, WFR_SETTINGS_VERSION)) break;
+        uint32_t ack = ack_enabled ? 1 : 0;
+        if(!flipper_format_write_uint32(ff, "WaitForACK", &ack, 1)) break;
+        ok = true;
+    } while(false);
+
+    flipper_format_free(ff);
+    return ok;
+}

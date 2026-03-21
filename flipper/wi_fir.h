@@ -17,7 +17,10 @@
 #include <nfc/protocols/mf_ultralight/mf_ultralight_poller.h>
 #include <nfc/protocols/mf_ultralight/mf_ultralight.h>
 
+#include <infrared_worker.h>
+
 #include "protocol/wfr_protocol.h"
+#include "wfr_decode.h"
 #include "wfr_storage.h"
 #include "scenes/wi_fir_scene.h"
 
@@ -76,6 +79,15 @@ typedef struct {
 
     /* Currently selected saved file (for delete from confirm screen) */
     char selected_saved_file[WFR_FILENAME_MAX];
+
+    /* Settings */
+    bool ack_enabled;
+
+    /* IR ACK receive state */
+    InfraredWorker* ir_worker;
+    FuriTimer* ack_timer;
+    WfrAckDecoder ack_decoder;
+    char ack_result_text[64];
 } WiFirApp;
 
 /* App entry point */

@@ -21,6 +21,11 @@ bool wfr_net_get_current(char* out, size_t out_size);
  * Returns true on success, false on failure. */
 bool wfr_net_connect(const WfrWifiCreds* creds);
 
+/* Get the current IP address of the WiFi interface.
+ * Writes to out (null-terminated), up to out_size bytes.
+ * Returns true if an IP address was found, false otherwise. */
+bool wfr_net_get_ip(char* out, size_t out_size);
+
 /* Reconnect to a previously saved SSID (for rollback).
  * Returns true on success, false on failure. */
 bool wfr_net_rollback(const char* ssid);

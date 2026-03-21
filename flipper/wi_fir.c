@@ -16,6 +16,7 @@ static WiFirApp* wi_fir_alloc(void) {
 
     /* Default security type */
     app->security_type = WFR_SEC_WPA;
+    app->ack_enabled = false;
 
     /* Open system services */
     app->gui = furi_record_open(RECORD_GUI);
@@ -57,6 +58,9 @@ static WiFirApp* wi_fir_alloc(void) {
     app->loading = loading_alloc();
     view_dispatcher_add_view(
         app->view_dispatcher, WiFirViewLoading, loading_get_view(app->loading));
+
+    /* Load settings from SD card */
+    wfr_storage_load_settings(app->storage, &app->ack_enabled);
 
     return app;
 }

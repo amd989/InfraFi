@@ -13,6 +13,7 @@ typedef enum {
     WiFirSceneScanNfc,
     WiFirSceneSaved,
     WiFirSceneAbout,
+    WiFirSceneSettings,
     WiFirSceneCount,
 } WiFirScene;
 
@@ -35,6 +36,11 @@ typedef enum {
     WiFirCustomEventConfirmDelete,
     WiFirCustomEventDeleteConfirmed,
     WiFirCustomEventDeleteCancelled,
+    WiFirCustomEventMainMenuSettings,
+    WiFirCustomEventAckSuccess,
+    WiFirCustomEventAckFail,
+    WiFirCustomEventAckTimeout,
+    WiFirCustomEventAckDismiss,
 } WiFirCustomEvent;
 
 /* Scene manager handlers (defined in wi_fir_scene.c) */
@@ -76,3 +82,7 @@ void wi_fir_scene_saved_on_exit(void* context);
 void wi_fir_scene_about_on_enter(void* context);
 bool wi_fir_scene_about_on_event(void* context, SceneManagerEvent event);
 void wi_fir_scene_about_on_exit(void* context);
+
+void wi_fir_scene_settings_on_enter(void* context);
+bool wi_fir_scene_settings_on_event(void* context, SceneManagerEvent event);
+void wi_fir_scene_settings_on_exit(void* context);
