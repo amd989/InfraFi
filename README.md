@@ -20,15 +20,20 @@ flowchart LR
 
     subgraph Linux Server
         B[infrafid daemon]
-        B1[/dev/lirc0]
+        B1["IR RX (/dev/lirc0)"]
         B2[WiFi Connect]
+        B3["IR TX (ACK)"]
         B1 --> B --> B2
+        B -.-> B3
     end
 
     A -- "IR (RC-6, 36kHz)" --> B1
+    B3 -. "ACK (OK/FAIL)" .-> A
 ```
 
 The Flipper encodes WiFi credentials as a sequence of **RC-6 IR messages** and blasts them at the server's CIR (Consumer IR) receiver. The `infrafid` daemon decodes the transmission and connects to the network automatically. No pairing, no Bluetooth, no network required — just line-of-sight IR.
+
+With **ACK enabled**, the daemon transmits a response back via IR — the Flipper displays whether the connection succeeded (with IP address) or failed.
 
 ## Features
 
@@ -38,11 +43,14 @@ The Flipper encodes WiFi credentials as a sequence of **RC-6 IR messages** and b
 - **Saved networks** — Credentials auto-save to SD card after successful transmit. Browse, resend, or delete saved networks
 - **Fast transmission** — Full credentials sent in under a second via RC-6 protocol
 - **Hidden network support** — Toggle hidden SSID flag
+- **ACK feedback** — Optional. When enabled in Settings, the Flipper waits for a response from the server after sending credentials. Shows "Connected! IP: x.x.x.x" or "Failed" on screen
 
 ### Linux Daemon (`infrafid`)
 - **Zero dependencies** — Pure C, no Python or runtime libraries needed
 - **Automatic WiFi connection** — Detects NetworkManager, systemd-networkd, or ifupdown and connects appropriately
 - **Rollback on failure** — Saves current SSID before connecting; reconnects to previous network if the new one fails
+- **SSID verification** — After WPA handshake completes, verifies the connected SSID matches the target to avoid false positives
+- **IR ACK response** — Sends connection result back to the Flipper via IR (requires TX hardware or external IR blaster)
 - **Runs as a service** — systemd unit with auto-restart, logs to journald/syslog
 - **ITE8708 optimized** — Uses `LIRC_MODE_SCANCODE` for kernel-decoded RC-6, avoiding hardware FIFO overflow issues with the CIR receivers found in Intel NUCs
 
@@ -93,6 +101,22 @@ The install script automatically:
 - Creates a udev rule so the config persists across reboots
 - Installs and starts the systemd service
 
+### Pre-built Packages
+
+Debian/Ubuntu and RPM packages are available from [GitHub Releases](https://github.com/amd989/infrafi/releases) for amd64, arm64, and armhf architectures.
+
+**APT repository:**
+```bash
+curl -fsSL https://amd989.github.io/infrafi/install-apt.sh | sudo bash
+sudo apt install infrafid
+```
+
+**YUM repository:**
+```bash
+curl -fsSL https://amd989.github.io/infrafi/install-yum.sh | sudo bash
+sudo yum install infrafid
+```
+
 ### Verify IR Receiver
 
 ```bash
@@ -124,11 +148,25 @@ ir-keytable -t -s rc0
 2. Open **InfraFi** → **Saved** to browse them
 3. Select a network to resend
 
+### ACK (Bidirectional Feedback)
+1. Open **InfraFi** → **Settings** → set **Wait for ACK** to **On**
+2. Send credentials as usual
+3. After transmitting, the Flipper shows "Waiting for server response..." with a cyan LED
+4. The daemon connects to WiFi and transmits the result back via IR:
+   - **Connected!** — green LED, shows IP address
+   - **Failed** — red LED
+   - **No response** — times out after 30 seconds (credentials were still sent)
+
+> **Note:** ACK requires an IR transmitter on the server side. Many NUCs have a CIR receiver but no TX LED. Use `--ack-device` with an external USB IR blaster if needed.
+
 ### Daemon
 
 ```bash
 # Run in foreground with verbose logging (useful for testing)
 sudo infrafid -f -v
+
+# Use a separate IR device for ACK transmission
+sudo infrafid -a /dev/lirc1
 
 # Check service status
 sudo systemctl status infrafid
@@ -150,9 +188,11 @@ Each RC-6 message carries one byte of payload:
 | Pass | `addr[1:0]` | Retransmission attempt (0-3) |
 | Command | `cmd[7:0]` | Payload byte |
 
-**Message sequence:** `START(len)` → `DATA × N` → `END(crc8)`
+**Credentials (Flipper → daemon):** `START(len)` → `DATA × N` → `END(crc8)`
 
-The payload is a standard WiFi QR string: `WIFI:T:WPA;S:MyNetwork;P:MyPassword;H:false;;`
+Payload is a standard WiFi QR string: `WIFI:T:WPA;S:MyNetwork;P:MyPassword;H:false;;`
+
+**ACK (daemon → Flipper):** Same framing. Payload is `OK:192.168.1.102` on success or `FAIL` on failure.
 
 ## Project Structure
 
@@ -162,21 +202,27 @@ infrafi/
 ├── flipper/                     # Flipper Zero app
 │   ├── wi_fir.h/c               # App entry, ViewDispatcher + SceneManager
 │   ├── wfr_encode.h/c           # RC-6 IR encoder + transmitter
+│   ├── wfr_decode.h/c           # RC-6 ACK decoder (IR receive)
 │   ├── wfr_nfc.h/c              # NFC NDEF WiFi tag parser
-│   ├── wfr_storage.h/c          # SD card credential storage
+│   ├── wfr_storage.h/c          # SD card credential + settings storage
 │   ├── protocol/
 │   │   ├── wfr_protocol.h       # Shared protocol constants + structs
-│   │   └── wfr_protocol.c       # CRC-8, WiFi string builder/parser
-│   ├── scenes/                  # UI scenes (menu, editors, confirm, transmit, NFC, saved, about)
+│   │   ├── wfr_protocol.c       # CRC-8, WiFi string builder/parser
+│   │   └── version.h            # Shared version (Flipper + daemon)
+│   ├── scenes/                  # UI scenes (menu, editors, confirm, transmit, NFC, saved, settings, about)
 │   └── images/                  # App icon
-└── daemon/                      # Linux daemon (infrafid)
-    ├── main.c                   # Entry point, CLI args, main loop
-    ├── wfr_lirc.h/c             # LIRC scancode reader
-    ├── wfr_decode.h/c           # RC-6 message reassembler
-    ├── wfr_network.h/c          # WiFi connector (NM/networkd/ifupdown) with rollback
-    ├── Makefile                 # Build
-    ├── infrafid.service         # systemd unit
-    └── install.sh               # One-step install
+├── daemon/                      # Linux daemon (infrafid)
+│   ├── main.c                   # Entry point, CLI args, main loop
+│   ├── wfr_lirc.h/c             # LIRC scancode reader
+│   ├── wfr_decode.h/c           # RC-6 message reassembler
+│   ├── wfr_network.h/c          # WiFi connector (NM/networkd/ifupdown) with rollback
+│   ├── wfr_ack.h/c              # IR ACK transmitter (LIRC TX)
+│   ├── Makefile                 # Build
+│   ├── infrafid.service         # systemd unit
+│   └── install.sh               # One-step install
+├── debian/                      # Debian packaging
+├── rpm/                         # RPM packaging
+└── .github/workflows/           # CI/CD (ci.yml, release.yml)
 ```
 
 ## Author
