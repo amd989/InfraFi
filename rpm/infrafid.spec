@@ -12,6 +12,8 @@ BuildRequires:  make
 BuildRequires:  kernel-headers
 BuildRequires:  systemd-rpm-macros
 
+%global debug_package %{nil}
+
 %description
 Receives WiFi credentials transmitted via infrared (RC-6 protocol) from a
 Flipper Zero running the InfraFi app. Automatically connects to the
