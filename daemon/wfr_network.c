@@ -48,6 +48,25 @@ static int run_cmd(const char* cmd) {
     return WEXITSTATUS(status);
 }
 
+/* Run a wpa_cli command and check for "OK" in output. Returns true on success. */
+static bool run_wpa_cmd(const char* cmd) {
+    syslog(LOG_DEBUG, "infrafid: exec: %s", cmd);
+    FILE* fp = popen(cmd, "r");
+    if(!fp) {
+        syslog(LOG_ERR, "infrafid: popen() failed for: %s", cmd);
+        return false;
+    }
+    char buf[64] = {0};
+    if(fgets(buf, sizeof(buf), fp)) {
+        /* Trim trailing newline */
+        size_t len = strlen(buf);
+        if(len > 0 && buf[len - 1] == '\n') buf[len - 1] = '\0';
+        syslog(LOG_DEBUG, "infrafid: wpa_cli result: %s", buf);
+    }
+    pclose(fp);
+    return strncmp(buf, "OK", 2) == 0;
+}
+
 /* Run a command and capture first line of stdout. */
 static bool run_cmd_output(const char* cmd, char* out, size_t out_size) {
     FILE* fp = popen(cmd, "r");
@@ -318,7 +337,7 @@ static bool wfr_net_connect_networkd(const WfrWifiCreds* creds) {
     /* Set SSID */
     snprintf(cmd, sizeof(cmd),
         "wpa_cli -i %s set_network %s ssid '\"%s\"' 2>/dev/null", iface, net_id, creds->ssid);
-    if(run_cmd(cmd) != 0) {
+    if(!run_wpa_cmd(cmd)) {
         syslog(LOG_ERR, "infrafid: wpa_cli set ssid failed");
         return false;
     }
@@ -327,19 +346,25 @@ static bool wfr_net_connect_networkd(const WfrWifiCreds* creds) {
     if(creds->security == WFR_SEC_OPEN) {
         snprintf(cmd, sizeof(cmd),
             "wpa_cli -i %s set_network %s key_mgmt NONE 2>/dev/null", iface, net_id);
-        run_cmd(cmd);
+        run_wpa_cmd(cmd);
     } else if(creds->security == WFR_SEC_SAE) {
         snprintf(cmd, sizeof(cmd),
             "wpa_cli -i %s set_network %s key_mgmt SAE 2>/dev/null", iface, net_id);
-        run_cmd(cmd);
+        if(!run_wpa_cmd(cmd)) {
+            syslog(LOG_ERR, "infrafid: wpa_cli set key_mgmt SAE failed");
+            return false;
+        }
         snprintf(cmd, sizeof(cmd),
             "wpa_cli -i %s set_network %s psk '\"%s\"' 2>/dev/null", iface, net_id, creds->password);
-        run_cmd(cmd);
+        if(!run_wpa_cmd(cmd)) {
+            syslog(LOG_ERR, "infrafid: wpa_cli set psk failed (password must be 8-63 chars)");
+            return false;
+        }
     } else {
         snprintf(cmd, sizeof(cmd),
             "wpa_cli -i %s set_network %s psk '\"%s\"' 2>/dev/null", iface, net_id, creds->password);
-        if(run_cmd(cmd) != 0) {
-            syslog(LOG_ERR, "infrafid: wpa_cli set psk failed");
+        if(!run_wpa_cmd(cmd)) {
+            syslog(LOG_ERR, "infrafid: wpa_cli set psk failed (password must be 8-63 chars)");
             return false;
         }
     }
@@ -347,21 +372,21 @@ static bool wfr_net_connect_networkd(const WfrWifiCreds* creds) {
     if(creds->hidden) {
         snprintf(cmd, sizeof(cmd),
             "wpa_cli -i %s set_network %s scan_ssid 1 2>/dev/null", iface, net_id);
-        run_cmd(cmd);
+        run_wpa_cmd(cmd);
     }
 
     /* Select this network (disconnects from current, connects to new) */
     snprintf(cmd, sizeof(cmd),
         "wpa_cli -i %s select_network %s 2>/dev/null", iface, net_id);
-    if(run_cmd(cmd) != 0) {
+    if(!run_wpa_cmd(cmd)) {
         syslog(LOG_ERR, "infrafid: wpa_cli select_network failed");
         return false;
     }
 
     /* Wait for WPA association (up to 20 seconds) */
     int wpa_result = wait_for_wpa_association(iface, creds->ssid, 20);
-    if(wpa_result < 0) {
-        syslog(LOG_ERR, "infrafid: WPA authentication failed for %s", creds->ssid);
+    if(wpa_result <= 0) {
+        syslog(LOG_ERR, "infrafid: WPA association failed for %s", creds->ssid);
         return false;
     }
 
@@ -383,8 +408,14 @@ static bool wfr_net_connect_networkd(const WfrWifiCreds* creds) {
     }
 
     /* Save to wpa_supplicant config so it persists across reboots */
+    snprintf(cmd, sizeof(cmd),
+        "wpa_cli -i %s set update_config 1 2>/dev/null", iface);
+    run_wpa_cmd(cmd);
     snprintf(cmd, sizeof(cmd), "wpa_cli -i %s save_config 2>/dev/null", iface);
-    run_cmd(cmd);
+    if(!run_wpa_cmd(cmd)) {
+        syslog(LOG_DEBUG,
+            "infrafid: save_config failed — connection works but won't persist across reboot");
+    }
 
     return true;
 }
@@ -522,7 +553,7 @@ bool wfr_net_rollback(const char* ssid) {
         /* systemd-networkd: reload wpa_supplicant config to restore previous networks */
         char cmd[256];
         snprintf(cmd, sizeof(cmd), "wpa_cli -i %s reconfigure 2>/dev/null", iface);
-        run_cmd(cmd);
+        run_wpa_cmd(cmd);
         syslog(LOG_INFO, "infrafid: reconfigured wpa_supplicant, restoring previous state");
         return true;
     }
