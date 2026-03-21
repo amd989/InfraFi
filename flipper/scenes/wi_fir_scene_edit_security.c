@@ -3,11 +3,20 @@
 static const char* security_names[] = {"Open", "WPA", "WEP", "SAE"};
 #define SECURITY_COUNT 4
 
+static const char* hidden_names[] = {"No", "Yes"};
+
 static void wi_fir_scene_edit_security_change_callback(VariableItem* item) {
     WiFirApp* app = variable_item_get_context(item);
     uint8_t index = variable_item_get_current_value_index(item);
     app->security_type = index;
     variable_item_set_current_value_text(item, security_names[index]);
+}
+
+static void wi_fir_scene_edit_hidden_change_callback(VariableItem* item) {
+    WiFirApp* app = variable_item_get_context(item);
+    uint8_t index = variable_item_get_current_value_index(item);
+    app->hidden = (index == 1);
+    variable_item_set_current_value_text(item, hidden_names[index]);
 }
 
 static void wi_fir_scene_edit_security_enter_callback(void* context, uint32_t index) {
@@ -30,6 +39,16 @@ void wi_fir_scene_edit_security_on_enter(void* context) {
 
     variable_item_set_current_value_index(item, app->security_type);
     variable_item_set_current_value_text(item, security_names[app->security_type]);
+
+    VariableItem* hidden_item = variable_item_list_add(
+        app->variable_item_list,
+        "Hidden SSID",
+        2,
+        wi_fir_scene_edit_hidden_change_callback,
+        app);
+
+    variable_item_set_current_value_index(hidden_item, app->hidden ? 1 : 0);
+    variable_item_set_current_value_text(hidden_item, hidden_names[app->hidden ? 1 : 0]);
 
     /* Pressing OK/center on the item advances to confirm */
     variable_item_list_set_enter_callback(
