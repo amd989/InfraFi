@@ -2,12 +2,14 @@
 Description=InfraFi IR WiFi Credential Receiver
 After=network.target
 Wants=network.target
-
 [Service]
 Type=simple
+ExecCondition=/bin/sh -c 'ls /dev/lirc* >/dev/null 2>&1'
 ExecStart=/usr/local/bin/infrafid --foreground
-Restart=always
+Restart=on-failure
 RestartSec=5
+StartLimitBurst=3
+StartLimitIntervalSec=60
 User=root
 Group=root
 
