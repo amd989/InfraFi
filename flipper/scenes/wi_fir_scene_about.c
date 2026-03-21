@@ -1,17 +1,18 @@
 #include "../wi_fir.h"
+#include "../protocol/version.h"
 
 void wi_fir_scene_about_on_enter(void* context) {
     WiFirApp* app = context;
 
     popup_reset(app->popup);
-    popup_set_header(app->popup, "InfraFi v1.0", 64, 4, AlignCenter, AlignTop);
+    popup_set_header(app->popup, "InfraFi v" INFRAFI_VERSION, 64, 2, AlignCenter, AlignTop);
     popup_set_text(
         app->popup,
         "WiFi over Infrared\n"
-        "NFC + Manual + Saved\n\n"
+        "Point. Send. Connected.\n"
         "github.com/amd989",
         64,
-        28,
+        38,
         AlignCenter,
         AlignCenter);
     popup_disable_timeout(app->popup);

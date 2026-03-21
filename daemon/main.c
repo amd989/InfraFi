@@ -1,6 +1,7 @@
 #include "wfr_lirc.h"
 #include "wfr_decode.h"
 #include "wfr_network.h"
+#include "../flipper/protocol/version.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -23,6 +24,7 @@ static void print_usage(const char* prog) {
     fprintf(stderr, "  -d, --device PATH   LIRC device (default: /dev/lirc0)\n");
     fprintf(stderr, "  -f, --foreground     Run in foreground (don't daemonize)\n");
     fprintf(stderr, "  -v, --verbose        Verbose logging\n");
+    fprintf(stderr, "  -V, --version        Show version\n");
     fprintf(stderr, "  -h, --help           Show this help\n");
 }
 
@@ -75,12 +77,13 @@ int main(int argc, char* argv[]) {
         {"device", required_argument, NULL, 'd'},
         {"foreground", no_argument, NULL, 'f'},
         {"verbose", no_argument, NULL, 'v'},
+        {"version", no_argument, NULL, 'V'},
         {"help", no_argument, NULL, 'h'},
         {NULL, 0, NULL, 0},
     };
 
     int opt;
-    while((opt = getopt_long(argc, argv, "d:fvh", long_opts, NULL)) != -1) {
+    while((opt = getopt_long(argc, argv, "d:fvVh", long_opts, NULL)) != -1) {
         switch(opt) {
         case 'd':
             device = optarg;
@@ -91,6 +94,9 @@ int main(int argc, char* argv[]) {
         case 'v':
             log_level = LOG_DEBUG;
             break;
+        case 'V':
+            printf("infrafid %s\n", INFRAFI_VERSION);
+            return 0;
         case 'h':
             print_usage(argv[0]);
             return 0;
@@ -103,7 +109,7 @@ int main(int argc, char* argv[]) {
     openlog("infrafid", LOG_PID | (foreground ? LOG_PERROR : 0), LOG_DAEMON);
     setlogmask(LOG_UPTO(log_level));
 
-    syslog(LOG_INFO, "infrafid starting (device=%s)", device);
+    syslog(LOG_INFO, "infrafid %s starting (device=%s)", INFRAFI_VERSION, device);
 
     struct sigaction sa = {0};
     sa.sa_handler = signal_handler;
