@@ -246,13 +246,13 @@ jobs:
           <h2>Debian / Ubuntu / Mint (apt)</h2>
           <h3>Quick Install</h3>
           <pre>
-          curl -fsSL https://amd989.github.io/infrafi/setup.sh | sudo bash
+          curl -fsSL https://amd989.github.io/InfraFi/setup.sh | sudo bash
           sudo apt install infrafid
           </pre>
           <h3>Manual Setup</h3>
           <pre>
-          curl -fsSL https://amd989.github.io/infrafi/gpg.key | sudo gpg --dearmor -o /usr/share/keyrings/infrafid.gpg
-          echo "deb [signed-by=/usr/share/keyrings/infrafid.gpg] https://amd989.github.io/infrafi stable main" | sudo tee /etc/apt/sources.list.d/infrafid.list
+          curl -fsSL https://amd989.github.io/InfraFi/gpg.key | sudo gpg --dearmor -o /usr/share/keyrings/infrafid.gpg
+          echo "deb [signed-by=/usr/share/keyrings/infrafid.gpg] https://amd989.github.io/InfraFi stable main" | sudo tee /etc/apt/sources.list.d/infrafid.list
           sudo apt update
           sudo apt install infrafid
           </pre>
@@ -260,19 +260,19 @@ jobs:
           <h2>Rocky Linux / RHEL / Fedora (dnf)</h2>
           <h3>Quick Install</h3>
           <pre>
-          curl -fsSL https://amd989.github.io/infrafi/setup-rpm.sh | sudo bash
+          curl -fsSL https://amd989.github.io/InfraFi/setup-rpm.sh | sudo bash
           sudo dnf install infrafid
           </pre>
           <h3>Manual Setup</h3>
           <pre>
-          sudo rpm --import https://amd989.github.io/infrafi/gpg.key
+          sudo rpm --import https://amd989.github.io/InfraFi/gpg.key
           sudo tee /etc/yum.repos.d/infrafid.repo &lt;&lt;EOF
           [infrafid]
           name=infrafid
-          baseurl=https://amd989.github.io/infrafi/rpm/
+          baseurl=https://amd989.github.io/InfraFi/rpm/
           enabled=1
           gpgcheck=1
-          gpgkey=https://amd989.github.io/infrafi/gpg.key
+          gpgkey=https://amd989.github.io/InfraFi/gpg.key
           EOF
           sudo dnf install infrafid
           </pre>
@@ -286,8 +286,8 @@ jobs:
           #!/bin/bash
           set -e
           echo "Adding InfraFi APT repository..."
-          curl -fsSL https://amd989.github.io/infrafi/gpg.key | gpg --dearmor -o /usr/share/keyrings/infrafid.gpg
-          echo "deb [signed-by=/usr/share/keyrings/infrafid.gpg] https://amd989.github.io/infrafi stable main" > /etc/apt/sources.list.d/infrafid.list
+          curl -fsSL https://amd989.github.io/InfraFi/gpg.key | gpg --dearmor -o /usr/share/keyrings/infrafid.gpg
+          echo "deb [signed-by=/usr/share/keyrings/infrafid.gpg] https://amd989.github.io/InfraFi stable main" > /etc/apt/sources.list.d/infrafid.list
           apt-get update
           echo "Done! You can now run: sudo apt install infrafid"
           SETUPEOF
@@ -299,14 +299,14 @@ jobs:
           #!/bin/bash
           set -e
           echo "Adding InfraFi YUM/DNF repository..."
-          rpm --import https://amd989.github.io/infrafi/gpg.key
+          rpm --import https://amd989.github.io/InfraFi/gpg.key
           cat > /etc/yum.repos.d/infrafid.repo <<REPOEOF
           [infrafid]
           name=infrafid
-          baseurl=https://amd989.github.io/infrafi/rpm/
+          baseurl=https://amd989.github.io/InfraFi/rpm/
           enabled=1
           gpgcheck=1
-          gpgkey=https://amd989.github.io/infrafi/gpg.key
+          gpgkey=https://amd989.github.io/InfraFi/gpg.key
           REPOEOF
           echo "Done! You can now run: sudo dnf install infrafid"
           SETUPEOF

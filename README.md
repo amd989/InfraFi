@@ -97,13 +97,13 @@ Debian/Ubuntu and RPM packages are available from [GitHub Releases](https://gith
 
 **APT repository:**
 ```bash
-curl -fsSL https://amd989.github.io/infrafi/install-apt.sh | sudo bash
+curl -fsSL https://amd989.github.io/InfraFi/install-apt.sh | sudo bash
 sudo apt install infrafid
 ```
 
 **YUM repository:**
 ```bash
-curl -fsSL https://amd989.github.io/infrafi/install-yum.sh | sudo bash
+curl -fsSL https://amd989.github.io/InfraFi/install-yum.sh | sudo bash
 sudo yum install infrafid
 ```
 
