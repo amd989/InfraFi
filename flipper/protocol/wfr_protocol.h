@@ -8,6 +8,12 @@
 extern "C" {
 #endif
 
+/* IR transport protocol selection */
+typedef enum {
+    WfrIrProtocolRC6 = 0,
+    WfrIrProtocolNEC = 1,
+} WfrIrProtocol;
+
 /*
  * InfraFi Protocol — RC-6 Scancode Encoding
  *
@@ -44,6 +50,10 @@ extern "C" {
 #define WFR_RC6_INTER_MSG_MS      20   /* Delay between RC-6 messages (ms) */
 #define WFR_RC6_RETRANSMIT_GAP_MS 200  /* Gap between retransmission passes */
 #define WFR_RETRANSMIT_COUNT      1
+
+/* NEC timing — longer frames (~67ms each) need wider gaps to avoid repeat codes */
+#define WFR_NEC_INTER_MSG_MS      50
+#define WFR_NEC_RETRANSMIT_GAP_MS 200
 
 /* ACK timeout — how long Flipper waits for a response (seconds) */
 #define WFR_ACK_TIMEOUT_SEC       30

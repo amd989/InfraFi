@@ -51,12 +51,12 @@ int wfr_lirc_read_scancode(int fd, uint8_t* rc6_address, uint8_t* rc6_command) {
             (unsigned)sc.flags,
             (unsigned long long)sc.scancode);
 
-        /* Only accept RC-6 Mode 0 */
-        if(sc.rc_proto != RC_PROTO_RC6_0) {
+        /* Accept RC-6 Mode 0 or standard NEC — both encode as (address << 8 | command) */
+        if(sc.rc_proto != RC_PROTO_RC6_0 && sc.rc_proto != RC_PROTO_NEC) {
             continue;
         }
 
-        /* RC-6 Mode 0 scancode: bits [15:8] = address, bits [7:0] = command */
+        /* Scancode layout: bits [15:8] = address, bits [7:0] = command */
         *rc6_address = (uint8_t)((sc.scancode >> 8) & 0xFF);
         *rc6_command = (uint8_t)(sc.scancode & 0xFF);
         return 0;
