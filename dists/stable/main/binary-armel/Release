@@ -1,0 +1,5 @@
+Component: main
+Origin: infrafid
+Label: infrafid
+Architecture: armel
+Description: InfraFi IR WiFi credential receiver daemon
