@@ -42,6 +42,8 @@ jobs:
             docker_platform: linux/arm64
           - arch: armhf
             docker_platform: linux/arm/v7
+          - arch: armel
+            docker_platform: linux/arm/v6
 
     steps:
       - name: Checkout
