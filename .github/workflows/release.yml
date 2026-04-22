@@ -258,52 +258,15 @@ jobs:
           createrepo_c rpm/
           gpg --batch --pinentry-mode loopback --detach-sign --armor rpm/repodata/repomd.xml
 
-      - name: Create index page
+      - name: Fetch site assets from source
         run: |
-          cat > index.html <<'HTMLEOF'
-          <!DOCTYPE html>
-          <html>
-          <head><title>InfraFi Package Repository</title></head>
-          <body>
-          <h1>InfraFi Package Repository</h1>
-          <p>IR WiFi credential receiver daemon for Linux servers with CIR receivers.</p>
-
-          <h2>Debian / Ubuntu / Mint (apt)</h2>
-          <h3>Quick Install</h3>
-          <pre>
-          curl -fsSL https://amd989.github.io/InfraFi/setup.sh | sudo bash
-          sudo apt install infrafid
-          </pre>
-          <h3>Manual Setup</h3>
-          <pre>
-          curl -fsSL https://amd989.github.io/InfraFi/gpg.key | sudo gpg --dearmor -o /usr/share/keyrings/infrafid.gpg
-          echo "deb [signed-by=/usr/share/keyrings/infrafid.gpg] https://amd989.github.io/InfraFi stable main" | sudo tee /etc/apt/sources.list.d/infrafid.list
-          sudo apt update
-          sudo apt install infrafid
-          </pre>
-
-          <h2>Rocky Linux / RHEL / Fedora (dnf)</h2>
-          <h3>Quick Install</h3>
-          <pre>
-          curl -fsSL https://amd989.github.io/InfraFi/setup-rpm.sh | sudo bash
-          sudo dnf install infrafid
-          </pre>
-          <h3>Manual Setup</h3>
-          <pre>
-          sudo rpm --import https://amd989.github.io/InfraFi/gpg.key
-          sudo tee /etc/yum.repos.d/infrafid.repo &lt;&lt;EOF
-          [infrafid]
-          name=infrafid
-          baseurl=https://amd989.github.io/InfraFi/rpm/
-          enabled=1
-          gpgcheck=1
-          gpgkey=https://amd989.github.io/InfraFi/gpg.key
-          EOF
-          sudo dnf install infrafid
-          </pre>
-          </body>
-          </html>
-          HTMLEOF
+          curl -fsSL "https://raw.githubusercontent.com/amd989/InfraFi/${GITHUB_REF_NAME}/gh-pages/index.html" -o index.html
+          sed -i "s/{{VERSION}}/${GITHUB_REF_NAME#v}/g" index.html
+          curl -fsSL "https://raw.githubusercontent.com/amd989/InfraFi/${GITHUB_REF_NAME}/gh-pages/flipper.svg" -o flipper.svg
+          mkdir -p screenshots
+          for i in 1 2 3 4 5 6 7; do
+            curl -fsSL "https://raw.githubusercontent.com/amd989/InfraFi/${GITHUB_REF_NAME}/screenshots/ss${i}.png" -o "screenshots/ss${i}.png"
+          done
 
       - name: Create APT setup script
         run: |
