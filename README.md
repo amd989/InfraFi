@@ -55,7 +55,7 @@ With **ACK enabled**, the daemon transmits a response back via IR — the Flippe
 - **Runs as a service** — systemd unit with auto-restart, logs to journald/syslog
 - **Dual protocol** — LIRC input accepts both RC-6 and NEC scancodes automatically (just enable the protocol in `/sys/class/rc/rc*/protocols`)
 - **ITE8708 optimized** — Uses `LIRC_MODE_SCANCODE` for kernel-decoded scancodes, avoiding hardware FIFO overflow issues with the CIR receivers found in Intel NUCs
-- **evdev fallback** — For devices without LIRC (e.g., Squeezebox Touch), read NEC scancodes from `/dev/input/eventN` via `--evdev`
+- **evdev fallback** — For devices without LIRC (e.g., Squeezebox Touch), read NEC scancodes from `/dev/input/eventN` via `--evdev` (expects FAB4-style bit ordering)
 
 ## Getting Started
 
@@ -101,7 +101,7 @@ sudo systemctl enable --now infrafid
 ```
 
 The install script automatically:
-- Configures the IR receiver for RC-6 protocol only
+- Configures the IR receiver for RC-6 and NEC protocols
 - Creates a udev rule so the config persists across reboots
 - Installs and starts the systemd service
 
@@ -195,7 +195,7 @@ sudo journalctl -u infrafid -f
 | Flag | Description |
 |------|-------------|
 | `-d`, `--device PATH` | LIRC device for RX (default: `/dev/lirc0`) |
-| `-e`, `--evdev PATH` | evdev input device for RX (NEC via `MSC_RAW`) |
+| `-e`, `--evdev PATH` | evdev input device for RX (NEC via `MSC_RAW`, FAB4-style bit ordering) |
 | `-a`, `--ack-device PATH` | LIRC device for ACK TX (default: same as `-d`) |
 | `-f`, `--foreground` | Run in foreground (don't daemonize) |
 | `-v`, `--verbose` | Verbose logging |
@@ -213,6 +213,8 @@ InfraFi supports two IR transport protocols. The framing and payload format are 
 | **Flipper setting** | RC-6 (default) | NEC |
 
 RC-6 is the default and recommended for CIR receivers — it's faster and uses the kernel's built-in decoder (`LIRC_MODE_SCANCODE`), avoiding the tiny hardware FIFO that overflows with custom raw protocols. NEC works through LIRC as well (enable `nec` in `/sys/class/rc/rc*/protocols`), or through the Linux input subsystem (`--evdev`) for devices without LIRC.
+
+> **evdev note:** The current evdev decoder assumes FAB4-style NEC byte bit-ordering and bit-reverses each byte before validation.
 
 Each IR message carries one byte of payload:
 
@@ -248,7 +250,7 @@ infrafi/
 │   └── images/                  # App icon
 ├── daemon/                      # Linux daemon (infrafid)
 │   ├── main.c                   # Entry point, CLI args, main loop
-│   ├── wfr_lirc.h/c             # LIRC scancode reader (RC-6)
+│   ├── wfr_lirc.h/c             # LIRC scancode reader (RC-6 / NEC)
 │   ├── wfr_evdev.h/c            # evdev input reader (NEC via MSC_RAW)
 │   ├── wfr_decode.h/c           # IR message reassembler
 │   ├── wfr_network.h/c          # WiFi connector (NM/networkd/ifupdown) with rollback

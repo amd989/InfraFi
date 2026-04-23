@@ -11,7 +11,7 @@ void wfr_evdev_close(int fd);
 
 /* Read one NEC IR scancode from an evdev device (MSC_RAW events).
  * Blocks until a valid NEC scancode is available.
- * Performs bit-reversal and NEC inverse validation.
+ * Performs FAB4-style bit-reversal and NEC inverse validation.
  *
  * address: the decoded 8-bit address field
  * command: the decoded 8-bit command field

@@ -32,20 +32,20 @@ bool wfr_transmit_credentials(const WfrWifiCreds* creds, WfrIrProtocol protocol)
 
     /* Retransmit the full sequence multiple times */
     for(uint8_t attempt = 0; attempt < WFR_RETRANSMIT_COUNT; attempt++) {
-        uint8_t pass = attempt & WFR_RC6_PASS_MASK;
+        uint8_t pass = attempt & WFR_FRAME_PASS_MASK;
 
         /* --- START: address = magic | TYPE_START | pass, command = length --- */
-        wfr_send_ir(protocol, WFR_RC6_MAGIC | WFR_RC6_TYPE_START | pass, (uint8_t)wifi_len);
+        wfr_send_ir(protocol, WFR_FRAME_MAGIC | WFR_FRAME_TYPE_START | pass, (uint8_t)wifi_len);
         furi_delay_ms(inter_msg_ms);
 
         /* --- DATA: one IR message per payload byte --- */
         for(size_t i = 0; i < wifi_len; i++) {
-            wfr_send_ir(protocol, WFR_RC6_MAGIC | WFR_RC6_TYPE_DATA | pass, payload[i]);
+            wfr_send_ir(protocol, WFR_FRAME_MAGIC | WFR_FRAME_TYPE_DATA | pass, payload[i]);
             furi_delay_ms(inter_msg_ms);
         }
 
         /* --- END: address = magic | TYPE_END | pass, command = CRC-8 --- */
-        wfr_send_ir(protocol, WFR_RC6_MAGIC | WFR_RC6_TYPE_END | pass, payload_crc);
+        wfr_send_ir(protocol, WFR_FRAME_MAGIC | WFR_FRAME_TYPE_END | pass, payload_crc);
 
         /* Gap between retransmission passes */
         if(attempt + 1 < WFR_RETRANSMIT_COUNT) {

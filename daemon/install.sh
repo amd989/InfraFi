@@ -26,7 +26,7 @@ if [ "$HAS_LIRC" = true ]; then
         echo "  Active protocols: $(cat "$RC_DIR/protocols")"
 
         # Persist via udev rule so it survives reboot
-        UDEV_RULE="/etc/udev/rules.d/99-infrafid-rc6.rules"
+        UDEV_RULE="/etc/udev/rules.d/99-infrafid-ir.rules"
         echo 'ACTION=="add", SUBSYSTEM=="rc", ATTR{protocols}="rc-6 nec"' > "$UDEV_RULE"
         echo "  Created udev rule: $UDEV_RULE"
     else

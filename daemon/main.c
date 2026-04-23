@@ -24,7 +24,7 @@ static void print_usage(const char* prog) {
     fprintf(stderr, "Usage: %s [options]\n", prog);
     fprintf(stderr, "Options:\n");
     fprintf(stderr, "  -d, --device PATH       LIRC device for RX (default: /dev/lirc0)\n");
-    fprintf(stderr, "  -e, --evdev PATH        Use evdev input device for RX (NEC via MSC_RAW)\n");
+    fprintf(stderr, "  -e, --evdev PATH        Use evdev input device for RX (NEC via MSC_RAW, FAB4-style bit order)\n");
     fprintf(stderr, "  -a, --ack-device PATH   LIRC device for ACK TX (default: same as --device)\n");
     fprintf(stderr, "  -f, --foreground        Run in foreground (don't daemonize)\n");
     fprintf(stderr, "  -v, --verbose           Verbose logging\n");
@@ -146,6 +146,12 @@ int main(int argc, char* argv[]) {
 
     /* Default ACK device to LIRC device (not evdev — evdev can't transmit) */
     if(!ack_device) ack_device = device;
+
+    if(use_evdev && strcmp(ack_device, "/dev/lirc0") == 0) {
+        syslog(LOG_WARNING,
+            "infrafid: --evdev is active and ACK TX defaults to %s; set --ack-device if this host has no LIRC TX device",
+            ack_device);
+    }
 
     syslog(LOG_INFO, "infrafid %s starting (rx=%s [%s], tx=%s)",
         INFRAFI_VERSION, rx_device, use_evdev ? "evdev" : "lirc", ack_device);

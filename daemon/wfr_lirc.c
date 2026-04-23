@@ -34,7 +34,7 @@ void wfr_lirc_close(int fd) {
     }
 }
 
-int wfr_lirc_read_scancode(int fd, uint8_t* rc6_address, uint8_t* rc6_command) {
+int wfr_lirc_read_scancode(int fd, uint8_t* address, uint8_t* command) {
     for(;;) {
         struct lirc_scancode sc;
         ssize_t n = read(fd, &sc, sizeof(sc));
@@ -57,8 +57,8 @@ int wfr_lirc_read_scancode(int fd, uint8_t* rc6_address, uint8_t* rc6_command) {
         }
 
         /* Scancode layout: bits [15:8] = address, bits [7:0] = command */
-        *rc6_address = (uint8_t)((sc.scancode >> 8) & 0xFF);
-        *rc6_command = (uint8_t)(sc.scancode & 0xFF);
+        *address = (uint8_t)((sc.scancode >> 8) & 0xFF);
+        *command = (uint8_t)(sc.scancode & 0xFF);
         return 0;
     }
 }
