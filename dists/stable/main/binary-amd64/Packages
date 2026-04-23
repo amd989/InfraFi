@@ -1,18 +1,18 @@
 Package: infrafid
-Version: 1.1-1
+Version: 1.2-1
 Architecture: amd64
 Maintainer: amd989 <amd989@users.noreply.github.com>
-Installed-Size: 55
+Installed-Size: 59
 Depends: libc6 (>= 2.34)
 Recommends: network-manager | wpasupplicant
 Homepage: https://github.com/amd989/infrafi
 Priority: optional
 Section: net
-Filename: pool/main/i/infrafid/infrafid_1.1-1_amd64.deb
-Size: 15648
-SHA256: 0edc28e3ee1ca49253c0775a473e5410b0ee4ebe142975849b706d010ff88cb0
-SHA1: aa2e3a47cef8ecba4c7b5c989ea8a14b3108b942
-MD5sum: 6879e97109192b2d9cb38d433c497b50
+Filename: pool/main/i/infrafid/infrafid_1.2-1_amd64.deb
+Size: 16428
+SHA256: 38f52418c4560fc90ca82b14b5b29982a0d11311da4f20abcd2dd632f5092068
+SHA1: 80e79a8bc9754069c1193698b80c6bb7fd584362
+MD5sum: d728c159199eadcd8dc61351fee14922
 Description: InfraFi IR WiFi credential receiver daemon
  Receives WiFi credentials transmitted via infrared (RC-6 protocol)
  from a Flipper Zero running the InfraFi app. Automatically connects
@@ -24,19 +24,19 @@ Description: InfraFi IR WiFi credential receiver daemon
 
 Package: infrafid-dbgsym
 Source: infrafid
-Version: 1.1-1
+Version: 1.2-1
 Auto-Built-Package: debug-symbols
 Architecture: amd64
 Maintainer: amd989 <amd989@users.noreply.github.com>
 Installed-Size: 18
-Depends: infrafid (= 1.1-1)
+Depends: infrafid (= 1.2-1)
 Priority: optional
 Section: debug
-Filename: pool/main/i/infrafid/infrafid-dbgsym_1.1-1_amd64.deb
-Size: 3060
-SHA256: 6bf3df50b282eb3914209fdf94714ee3ef005448a4f462f41d04be1a381e95ae
-SHA1: 345a03d75cc1d222f66c316c17fa6283c17a2b15
-MD5sum: 524aa8ad1fd96994c55f4326fec816d4
+Filename: pool/main/i/infrafid/infrafid-dbgsym_1.2-1_amd64.deb
+Size: 3096
+SHA256: c8a89ab9fd3f4d5922eb6ff3ee91d702cfa7151d13cd5e1661394466f1d6a679
+SHA1: c643c802a5890ba41237152905e011e05b498b1e
+MD5sum: 298a64cdafd3fe78f70a4112bc081f9c
 Description: debug symbols for infrafid
-Build-Ids: 8730cd3a0dd511073b0f391befa0859b417c279c
+Build-Ids: 43da55e7374f9c75e301577e48844502e2ecce84
 
