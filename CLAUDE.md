@@ -18,7 +18,8 @@ infrafi/
       wfr_protocol.c       # CRC-8, WiFi QR string builder/parser
       version.h            # Shared version (semver, single source of truth)
     scenes/                # Flipper UI scenes (main_menu, edit_*, confirm, transmit, scan_nfc, saved, settings, about)
-    images/                # App icon (10x10 1-bit PNG)
+    views/                 # Custom views: wfr_menu_view (carousel), wfr_list_view (saved), wfr_confirm_view, wfr_status_view (animated transmit/wait/result/NFC/about), wfr_draw (shared helpers)
+    images/                # App icon (infrafi_10px) + 1-bit sprites, compiled to infrafi_icons.h (I_<name>)
   daemon/                  # Linux daemon (infrafid)
     main.c                 # Entry point, CLI args, main loop
     wfr_lirc.h/c           # LIRC scancode reader (/dev/lirc0, LIRC_MODE_SCANCODE)
@@ -89,4 +90,8 @@ Runs as root (needed to write network config). Logs to syslog/journald.
 - ACK is opt-in on the Flipper (Settings → Wait for ACK) because not all servers have IR TX hardware
 - Version shared between Flipper and daemon via `flipper/protocol/version.h`
 - Internal C code uses `wi_fir_`/`WiFir`/`wfr_`/`WFR_` prefixes (legacy, not worth renaming)
+- Custom views replace the stock Submenu/Popup/Loading widgets; TextInput, VariableItemList (edit security, settings) and the delete DialogEx stay stock
+- IR transmit runs on a worker thread (`InfraFiTx`) with a progress callback so the status view can animate; Back cancels it
+- `wfr_status_view` animates itself with a 100ms FuriTimer while on screen; scenes auto-dismiss results via ViewDispatcher tick events (`app->dismiss_ticks`)
+- Sprites: menu icons, server, lock, check come from Pixelarticons (MIT, see THIRD_PARTY_NOTICES.md); Flipper device, small list icons and pulses are hand-drawn. PNGs use black = lit pixel
 - Flipper TextInput keyboard is hardcoded in firmware — missing `\ | { } [ ] < > ~`. NFC tags are the workaround for passwords with special characters.

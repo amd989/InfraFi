@@ -1,12 +1,7 @@
 #include "../wi_fir.h"
 #include "../wfr_nfc.h"
 
-/* Override popup input so back button reaches ViewDispatcher navigation callback */
-static bool wi_fir_scan_nfc_input_cb(InputEvent* event, void* context) {
-    UNUSED(event);
-    UNUSED(context);
-    return false;
-}
+#define NFC_ERROR_TICKS 20 /* show the error for 2s, then scan again */
 
 static NfcCommand wi_fir_nfc_poller_callback(NfcGenericEvent event, void* context) {
     WiFirApp* app = context;
@@ -45,31 +40,46 @@ static NfcCommand wi_fir_nfc_poller_callback(NfcGenericEvent event, void* contex
     }
 }
 
-void wi_fir_scene_scan_nfc_on_enter(void* context) {
-    WiFirApp* app = context;
+static void wi_fir_nfc_stop(WiFirApp* app) {
+    if(app->nfc_poller) {
+        nfc_poller_stop(app->nfc_poller);
+        nfc_poller_free(app->nfc_poller);
+        app->nfc_poller = NULL;
+    }
+    if(app->nfc) {
+        nfc_free(app->nfc);
+        app->nfc = NULL;
+    }
+}
 
-    /* Show scanning popup */
-    popup_reset(app->popup);
-    popup_set_header(app->popup, "Scanning...", 64, 10, AlignCenter, AlignCenter);
-    popup_set_text(
-        app->popup,
-        "Place NFC WiFi tag\non back of Flipper",
-        64,
-        35,
-        AlignCenter,
-        AlignCenter);
-    /* Override popup input so back button reaches scene manager */
-    view_set_input_callback(popup_get_view(app->popup), wi_fir_scan_nfc_input_cb);
+static void wi_fir_nfc_start(WiFirApp* app) {
+    wi_fir_nfc_stop(app);
+    app->dismiss_ticks = 0;
+    wfr_status_view_set_nfc_scan(app->status);
 
-    view_dispatcher_switch_to_view(app->view_dispatcher, WiFirViewPopup);
-
-    /* Start NFC detection LED blink (cyan like the stock NFC app) */
+    /* Cyan LED blink like the stock NFC app */
     notification_message(app->notifications, &sequence_blink_start_cyan);
 
-    /* Start NFC poller for MfUltralight (covers NTAG213/215/216) */
+    /* Poll for MfUltralight (covers NTAG213/215/216) */
     app->nfc = nfc_alloc();
     app->nfc_poller = nfc_poller_alloc(app->nfc, NfcProtocolMfUltralight);
     nfc_poller_start(app->nfc_poller, wi_fir_nfc_poller_callback, app);
+}
+
+static void wi_fir_nfc_show_error(WiFirApp* app, const char* title, const char* line1, const char* line2) {
+    wi_fir_nfc_stop(app);
+    notification_message(app->notifications, &sequence_blink_stop);
+    notification_message(app->notifications, &sequence_error);
+    wfr_status_view_set_result(
+        app->status, &I_menu_nfc_20x16, WfrStatusBadgeCross, title, line1, line2, NULL, NULL);
+    app->dismiss_ticks = NFC_ERROR_TICKS;
+}
+
+void wi_fir_scene_scan_nfc_on_enter(void* context) {
+    WiFirApp* app = context;
+    wfr_status_view_set_callback(app->status, NULL, NULL);
+    view_dispatcher_switch_to_view(app->view_dispatcher, WiFirViewStatus);
+    wi_fir_nfc_start(app);
 }
 
 bool wi_fir_scene_scan_nfc_on_event(void* context, SceneManagerEvent event) {
@@ -92,29 +102,18 @@ bool wi_fir_scene_scan_nfc_on_event(void* context, SceneManagerEvent event) {
             consumed = true;
 
         } else if(event.event == WiFirCustomEventNfcNotWifi) {
-            notification_message(app->notifications, &sequence_error);
-
-            popup_reset(app->popup);
-            popup_set_header(app->popup, "Not a WiFi Tag", 64, 20, AlignCenter, AlignCenter);
-            popup_set_text(
-                app->popup, "No WiFi credentials\nfound on this tag", 64, 40, AlignCenter, AlignCenter);
-            popup_set_timeout(app->popup, 2000);
-            popup_enable_timeout(app->popup);
-            view_dispatcher_switch_to_view(app->view_dispatcher, WiFirViewPopup);
+            wi_fir_nfc_show_error(app, "Not Wi-Fi", "No credentials", "on this tag");
             consumed = true;
 
         } else if(event.event == WiFirCustomEventNfcError) {
-            notification_message(app->notifications, &sequence_error);
-
-            popup_reset(app->popup);
-            popup_set_header(app->popup, "Read Error", 64, 20, AlignCenter, AlignCenter);
-            popup_set_text(
-                app->popup, "Failed to read tag\nTry again", 64, 40, AlignCenter, AlignCenter);
-            popup_set_timeout(app->popup, 2000);
-            popup_enable_timeout(app->popup);
-            view_dispatcher_switch_to_view(app->view_dispatcher, WiFirViewPopup);
+            wi_fir_nfc_show_error(app, "Read error", "Couldn't read tag", "Hold it still");
             consumed = true;
         }
+    } else if(event.type == SceneManagerEventTypeTick) {
+        if(app->dismiss_ticks > 0 && --app->dismiss_ticks == 0) {
+            wi_fir_nfc_start(app);
+        }
+        consumed = true;
     } else if(event.type == SceneManagerEventTypeBack) {
         scene_manager_previous_scene(app->scene_manager);
         consumed = true;
@@ -125,20 +124,7 @@ bool wi_fir_scene_scan_nfc_on_event(void* context, SceneManagerEvent event) {
 
 void wi_fir_scene_scan_nfc_on_exit(void* context) {
     WiFirApp* app = context;
-
-    /* Stop LED blink */
     notification_message(app->notifications, &sequence_blink_stop);
-
-    /* Stop and free NFC resources */
-    if(app->nfc_poller) {
-        nfc_poller_stop(app->nfc_poller);
-        nfc_poller_free(app->nfc_poller);
-        app->nfc_poller = NULL;
-    }
-    if(app->nfc) {
-        nfc_free(app->nfc);
-        app->nfc = NULL;
-    }
-
-    popup_reset(app->popup);
+    wi_fir_nfc_stop(app);
+    app->dismiss_ticks = 0;
 }

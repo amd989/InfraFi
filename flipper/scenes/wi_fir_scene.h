@@ -41,6 +41,10 @@ typedef enum {
     WiFirCustomEventAckFail,
     WiFirCustomEventAckTimeout,
     WiFirCustomEventAckDismiss,
+    WiFirCustomEventTxFinished,
+    WiFirCustomEventStatusLeft,
+    WiFirCustomEventStatusRight,
+    WiFirCustomEventStatusOk,
 } WiFirCustomEvent;
 
 /* Scene manager handlers (defined in wi_fir_scene.c) */

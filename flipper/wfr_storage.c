@@ -103,6 +103,7 @@ uint8_t wfr_storage_list(
     Storage* storage,
     char ssids[][WFR_SSID_MAX_LEN + 1],
     char filenames[][WFR_FILENAME_MAX],
+    uint8_t* securities,
     uint8_t max_count) {
     uint8_t count = 0;
 
@@ -134,6 +135,7 @@ uint8_t wfr_storage_list(
             ssids[count][WFR_SSID_MAX_LEN] = '\0';
             strncpy(filenames[count], name, WFR_FILENAME_MAX - 1);
             filenames[count][WFR_FILENAME_MAX - 1] = '\0';
+            if(securities) securities[count] = tmp_creds.security;
             count++;
         }
     }

@@ -9,26 +9,20 @@ static void wi_fir_scene_saved_callback(void* context, uint32_t index) {
 void wi_fir_scene_saved_on_enter(void* context) {
     WiFirApp* app = context;
 
-    submenu_reset(app->submenu);
-    submenu_set_header(app->submenu, "Saved Networks");
-
     /* Scan SD card for saved credentials */
     app->saved_count = wfr_storage_list(
-        app->storage, app->saved_ssids, app->saved_files, WFR_SAVED_MAX);
+        app->storage, app->saved_ssids, app->saved_files, app->saved_security, WFR_SAVED_MAX);
 
-    if(app->saved_count == 0) {
-        submenu_add_item(app->submenu, "(no saved networks)", 0, NULL, NULL);
-    } else {
-        for(uint8_t i = 0; i < app->saved_count; i++) {
-            submenu_add_item(
-                app->submenu, app->saved_ssids[i], i, wi_fir_scene_saved_callback, app);
-        }
+    wfr_list_view_reset(app->list, "Saved Networks");
+    for(uint8_t i = 0; i < app->saved_count; i++) {
+        wfr_list_view_add_item(
+            app->list, app->saved_ssids[i], app->saved_security[i] != WFR_SEC_OPEN);
     }
+    wfr_list_view_set_callback(app->list, wi_fir_scene_saved_callback, app);
+    wfr_list_view_set_selected(
+        app->list, scene_manager_get_scene_state(app->scene_manager, WiFirSceneSaved));
 
-    submenu_set_selected_item(
-        app->submenu, scene_manager_get_scene_state(app->scene_manager, WiFirSceneSaved));
-
-    view_dispatcher_switch_to_view(app->view_dispatcher, WiFirViewSubmenu);
+    view_dispatcher_switch_to_view(app->view_dispatcher, WiFirViewList);
 }
 
 bool wi_fir_scene_saved_on_event(void* context, SceneManagerEvent event) {
@@ -72,6 +66,5 @@ bool wi_fir_scene_saved_on_event(void* context, SceneManagerEvent event) {
 }
 
 void wi_fir_scene_saved_on_exit(void* context) {
-    WiFirApp* app = context;
-    submenu_reset(app->submenu);
+    UNUSED(context);
 }

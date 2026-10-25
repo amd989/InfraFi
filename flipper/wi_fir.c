@@ -10,6 +10,11 @@ static bool wi_fir_back_event_callback(void* context) {
     return scene_manager_handle_back_event(app->scene_manager);
 }
 
+static void wi_fir_tick_event_callback(void* context) {
+    WiFirApp* app = context;
+    scene_manager_handle_tick_event(app->scene_manager);
+}
+
 static WiFirApp* wi_fir_alloc(void) {
     WiFirApp* app = malloc(sizeof(WiFirApp));
     memset(app, 0, sizeof(WiFirApp));
@@ -30,12 +35,23 @@ static WiFirApp* wi_fir_alloc(void) {
     view_dispatcher_set_event_callback_context(app->view_dispatcher, app);
     view_dispatcher_set_custom_event_callback(app->view_dispatcher, wi_fir_custom_event_callback);
     view_dispatcher_set_navigation_event_callback(app->view_dispatcher, wi_fir_back_event_callback);
+    view_dispatcher_set_tick_event_callback(app->view_dispatcher, wi_fir_tick_event_callback, 100);
     view_dispatcher_attach_to_gui(app->view_dispatcher, app->gui, ViewDispatcherTypeFullscreen);
 
     /* Allocate view modules and register with ViewDispatcher */
-    app->submenu = submenu_alloc();
+    app->menu = wfr_menu_view_alloc();
+    view_dispatcher_add_view(app->view_dispatcher, WiFirViewMenu, wfr_menu_view_get_view(app->menu));
+
+    app->list = wfr_list_view_alloc();
+    view_dispatcher_add_view(app->view_dispatcher, WiFirViewList, wfr_list_view_get_view(app->list));
+
+    app->confirm = wfr_confirm_view_alloc();
     view_dispatcher_add_view(
-        app->view_dispatcher, WiFirViewSubmenu, submenu_get_view(app->submenu));
+        app->view_dispatcher, WiFirViewConfirm, wfr_confirm_view_get_view(app->confirm));
+
+    app->status = wfr_status_view_alloc();
+    view_dispatcher_add_view(
+        app->view_dispatcher, WiFirViewStatus, wfr_status_view_get_view(app->status));
 
     app->text_input = text_input_alloc();
     view_dispatcher_add_view(
@@ -51,14 +67,6 @@ static WiFirApp* wi_fir_alloc(void) {
     view_dispatcher_add_view(
         app->view_dispatcher, WiFirViewDialogEx, dialog_ex_get_view(app->dialog_ex));
 
-    app->popup = popup_alloc();
-    view_dispatcher_add_view(
-        app->view_dispatcher, WiFirViewPopup, popup_get_view(app->popup));
-
-    app->loading = loading_alloc();
-    view_dispatcher_add_view(
-        app->view_dispatcher, WiFirViewLoading, loading_get_view(app->loading));
-
     /* Load settings from SD card */
     wfr_storage_load_settings(app->storage, &app->ack_enabled, &app->ir_protocol);
 
@@ -67,20 +75,22 @@ static WiFirApp* wi_fir_alloc(void) {
 
 static void wi_fir_free(WiFirApp* app) {
     /* Remove views before freeing modules */
-    view_dispatcher_remove_view(app->view_dispatcher, WiFirViewSubmenu);
+    view_dispatcher_remove_view(app->view_dispatcher, WiFirViewMenu);
+    view_dispatcher_remove_view(app->view_dispatcher, WiFirViewList);
+    view_dispatcher_remove_view(app->view_dispatcher, WiFirViewConfirm);
+    view_dispatcher_remove_view(app->view_dispatcher, WiFirViewStatus);
     view_dispatcher_remove_view(app->view_dispatcher, WiFirViewTextInput);
     view_dispatcher_remove_view(app->view_dispatcher, WiFirViewVariableItemList);
     view_dispatcher_remove_view(app->view_dispatcher, WiFirViewDialogEx);
-    view_dispatcher_remove_view(app->view_dispatcher, WiFirViewPopup);
-    view_dispatcher_remove_view(app->view_dispatcher, WiFirViewLoading);
 
     /* Free view modules */
-    submenu_free(app->submenu);
+    wfr_menu_view_free(app->menu);
+    wfr_list_view_free(app->list);
+    wfr_confirm_view_free(app->confirm);
+    wfr_status_view_free(app->status);
     text_input_free(app->text_input);
     variable_item_list_free(app->variable_item_list);
     dialog_ex_free(app->dialog_ex);
-    popup_free(app->popup);
-    loading_free(app->loading);
 
     /* Free scene manager and view dispatcher */
     scene_manager_free(app->scene_manager);

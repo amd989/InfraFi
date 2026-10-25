@@ -13,7 +13,11 @@ static void wfr_send_ir(WfrIrProtocol protocol, uint8_t address, uint8_t command
     infrared_send(&message, 1);
 }
 
-bool wfr_transmit_credentials(const WfrWifiCreds* creds, WfrIrProtocol protocol) {
+bool wfr_transmit_credentials(
+    const WfrWifiCreds* creds,
+    WfrIrProtocol protocol,
+    WfrTxProgressCallback progress,
+    void* context) {
     if(!creds || creds->ssid[0] == '\0') return false;
 
     /* Build WiFi QR string */
@@ -30,6 +34,9 @@ bool wfr_transmit_credentials(const WfrWifiCreds* creds, WfrIrProtocol protocol)
     uint32_t retransmit_gap_ms = (protocol == WfrIrProtocolNEC) ?
         WFR_NEC_RETRANSMIT_GAP_MS : WFR_RC6_RETRANSMIT_GAP_MS;
 
+    const uint16_t total = (uint16_t)(wifi_len * WFR_RETRANSMIT_COUNT);
+    if(progress && !progress(0, total, context)) return false;
+
     /* Retransmit the full sequence multiple times */
     for(uint8_t attempt = 0; attempt < WFR_RETRANSMIT_COUNT; attempt++) {
         uint8_t pass = attempt & WFR_FRAME_PASS_MASK;
@@ -42,6 +49,9 @@ bool wfr_transmit_credentials(const WfrWifiCreds* creds, WfrIrProtocol protocol)
         for(size_t i = 0; i < wifi_len; i++) {
             wfr_send_ir(protocol, WFR_FRAME_MAGIC | WFR_FRAME_TYPE_DATA | pass, payload[i]);
             furi_delay_ms(inter_msg_ms);
+            if(progress && !progress((uint16_t)(attempt * wifi_len + i + 1), total, context)) {
+                return false;
+            }
         }
 
         /* --- END: address = magic | TYPE_END | pass, command = CRC-8 --- */

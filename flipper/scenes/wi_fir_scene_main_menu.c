@@ -37,40 +37,20 @@ static void wi_fir_scene_main_menu_callback(void* context, uint32_t index) {
 void wi_fir_scene_main_menu_on_enter(void* context) {
     WiFirApp* app = context;
 
-    submenu_reset(app->submenu);
-    submenu_set_header(app->submenu, "InfraFi");
-    submenu_add_item(
-        app->submenu,
-        "Send Credentials",
-        MainMenuIndexCredentials,
-        wi_fir_scene_main_menu_callback,
-        app);
-    submenu_add_item(
-        app->submenu,
-        "Scan NFC Tag",
-        MainMenuIndexScanNfc,
-        wi_fir_scene_main_menu_callback,
-        app);
-    submenu_add_item(
-        app->submenu,
-        "Saved",
-        MainMenuIndexSaved,
-        wi_fir_scene_main_menu_callback,
-        app);
-    submenu_add_item(
-        app->submenu,
-        "Settings",
-        MainMenuIndexSettings,
-        wi_fir_scene_main_menu_callback,
-        app);
-    submenu_add_item(
-        app->submenu, "About", MainMenuIndexAbout, wi_fir_scene_main_menu_callback, app);
+    /* Order must match the MainMenuIndex enum */
+    wfr_menu_view_reset(app->menu);
+    wfr_menu_view_add_item(app->menu, "Send Credentials", &I_menu_keyboard_22x18);
+    wfr_menu_view_add_item(app->menu, "Scan NFC Tag", &I_menu_nfc_20x16);
+    wfr_menu_view_add_item(app->menu, "Saved Networks", &I_menu_saved_20x20);
+    wfr_menu_view_add_item(app->menu, "Settings", &I_menu_settings_24x24);
+    wfr_menu_view_add_item(app->menu, "About", &I_menu_about_20x20);
+    wfr_menu_view_set_callback(app->menu, wi_fir_scene_main_menu_callback, app);
 
     /* Restore selected item when returning to this scene */
-    submenu_set_selected_item(
-        app->submenu, scene_manager_get_scene_state(app->scene_manager, WiFirSceneMainMenu));
+    wfr_menu_view_set_selected(
+        app->menu, scene_manager_get_scene_state(app->scene_manager, WiFirSceneMainMenu));
 
-    view_dispatcher_switch_to_view(app->view_dispatcher, WiFirViewSubmenu);
+    view_dispatcher_switch_to_view(app->view_dispatcher, WiFirViewMenu);
 }
 
 bool wi_fir_scene_main_menu_on_event(void* context, SceneManagerEvent event) {
@@ -116,6 +96,5 @@ bool wi_fir_scene_main_menu_on_event(void* context, SceneManagerEvent event) {
 }
 
 void wi_fir_scene_main_menu_on_exit(void* context) {
-    WiFirApp* app = context;
-    submenu_reset(app->submenu);
+    UNUSED(context);
 }

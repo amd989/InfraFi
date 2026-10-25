@@ -247,7 +247,8 @@ infrafi/
 │   │   ├── wfr_protocol.c       # CRC-8, WiFi string builder/parser
 │   │   └── version.h            # Shared version (Flipper + daemon)
 │   ├── scenes/                  # UI scenes (menu, editors, confirm, transmit, NFC, saved, settings, about)
-│   └── images/                  # App icon
+│   ├── views/                   # Custom views (carousel menu, saved list, confirm, animated status)
+│   └── images/                  # App icon + 1-bit sprites (some from Pixelarticons, MIT)
 ├── daemon/                      # Linux daemon (infrafid)
 │   ├── main.c                   # Entry point, CLI args, main loop
 │   ├── wfr_lirc.h/c             # LIRC scancode reader (RC-6 / NEC)

@@ -16,12 +16,14 @@ bool wfr_storage_save(Storage* storage, const WfrWifiCreds* creds);
 bool wfr_storage_load(Storage* storage, const char* path, WfrWifiCreds* creds);
 
 /* List saved credential files.
- * Populates ssids[] with display names and filenames[] with just the filename.
+ * Populates ssids[] with display names, filenames[] with just the filename and,
+ * if securities is not NULL, securities[] with each network's WFR_SEC_* type.
  * Returns the number of entries found (up to max_count). */
 uint8_t wfr_storage_list(
     Storage* storage,
     char ssids[][WFR_SSID_MAX_LEN + 1],
     char filenames[][WFR_FILENAME_MAX],
+    uint8_t* securities,
     uint8_t max_count);
 
 /* Delete a saved credential file by filename. */
