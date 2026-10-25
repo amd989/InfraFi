@@ -68,7 +68,11 @@ jobs:
           - arch: armhf
             docker_platform: linux/arm/v7
           - arch: armel
-            docker_platform: linux/arm/v6
+            # Debian armel (ARMv5+, also runs on ARMv6 Pi Zero/1). There is no
+            # arm/v6 Debian image and debian:bookworm no longer lists arm/v5,
+            # so pull the per-arch repo directly.
+            docker_platform: linux/arm/v5
+            docker_image: arm32v5/debian:bookworm
 
     steps:
       - name: Checkout
@@ -83,7 +87,7 @@ jobs:
         run: |
           docker run --rm --platform ${{ matrix.docker_platform }} \
             -v "$PWD":/build -w /build \
-            debian:bookworm bash -c '
+            ${{ matrix.docker_image || 'debian:bookworm' }} bash -c '
               set -e
               apt-get update
               apt-get install -y --no-install-recommends \
